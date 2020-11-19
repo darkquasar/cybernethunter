@@ -98,7 +98,7 @@ class Arguments(object):
                 "-o", "--output",
                 help="Type of output: stdout-csv, stdout-json, kafka, rabbitmq, elasticsearch",
                 type=str,
-                choices=["stdout-csv", "stdout-json", "rabbitmq", "kafka", "elasticsearch"],
+                choices=["stdout-tsv", "stdout-csv", "stdout-json", "rabbitmq", "kafka", "elasticsearch"],
                 default="stdout-json",
                 required=False
                 )

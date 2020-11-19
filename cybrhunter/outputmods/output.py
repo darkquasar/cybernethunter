@@ -32,30 +32,32 @@ from tabulate import tabulate
 
 class Output:
 
-    def __init__(self, output_type, logtype, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None, hostname=None):
+    def __init__(self, output_type, log_type, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None, hostname=None):
         
         # Setup logging
         # We need to pass the "logger" to any Classes or Modules that may use it 
         # in our script
         try:
             import coloredlogs
-            logger = logging.getLogger('CYBRHUNTER.OUTPUT')
-            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=logger)
+            self.logger = logging.getLogger('CYBRHUNTER.OUTPUT')
+            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
 
         except ModuleNotFoundError:
-            logger = logging.getLogger('CYBRHUNTER.OUTPUT')
+            self.logger = logging.getLogger('CYBRHUNTER.OUTPUT')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
             console_handler.setLevel(logging.DEBUG)
-            logger.addHandler(console_handler)
-            logger.setLevel(logging.INFO)
+            self.logger.addHandler(console_handler)
+            self.logger.setLevel(logging.INFO)
     
         # To be used in sqlite/elasticsearch output
         self.hostname = hostname
         # To determine whether output should be stdout
-        self.logtype = logtype
+        self.log_type = log_type
         self.output_type = output_type
+        
+        self.logger.info("Will send data to output pipeline in {} format".format(self.output_type))
 
         if self.output_type in "sqlite3":
             # No implemented
@@ -85,15 +87,18 @@ class Output:
             self.send_to_elasticsearch(record, ampq=self.output_type)
 
         elif self.output_type == "stdout-json":
-            self.send_to_stdout(record)
+            self.send_to_stdout(record, output_type='json')
             
         elif self.output_type == "stdout-csv":
-            self.send_to_stdout(record)
+            self.send_to_stdout(record, output_type='csv')
+            
+        elif self.output_type == "stdout-tsv":
+            self.send_to_stdout(record, output_type='tsv')
         
     def close_output_pipe(self):
 
         if self.output_type == "stdout-tsv":
-            self.outfilepointer.close()
+            pass
     
         elif self.output_type == "sqlite":
             self.conn.commit()
@@ -152,11 +157,11 @@ class Output:
             # Assigning a name to the log according to their collector source
             # make sure to lowercase the string and replace any (/,\,+,[space]),
             # otherwise elasticsearch cannot create the index
-            if self.logtype == 'xml':
+            if self.log_type == 'xml':
                 dictobj['log_name'] = dictobj['Channel']
                 dictobj['log_src_pipeline'] = "cybrhunter"
 
-            if self.logtype == 'csv':
+            if self.log_type == 'csv':
                 dictobj['log_src_pipeline'] = "cybrhunter"          
     
             # Assigning the value of the source host where the logs were collected
@@ -175,7 +180,7 @@ class Output:
                     print("Error 2, could not connect to socket")
                     sys.exit(1)
     
-    def send_to_stdout(self, data_dict, output_type='csv', nested=False):
+    def send_to_stdout(self, data_dict, output_type='tsv', nested=False):
 
             # store non-empty keys in a list so as to only display those keys with actual values for each event category to stdout
             nonemptykey = []
@@ -198,24 +203,35 @@ class Output:
             # *** SENDING DATA TO STDOUT ***
             # ******************************
             try:
-                # If ingested Log is CSV
-                if self.logtype == 'csv':
-                    dictobj['log_src_pipeline'] = "cybrhunter"
-                    print(ascii(dictobj), file=sys.stdout, flush=True)
         
             # If ingested Log is XML
             # Adding required fields for tagging / compatibility purposes
-                elif self.logtype == 'xml':
+                if self.log_type == 'windows_event':
                     dictobj['log_name'] = dictobj['Channel']
                     dictobj['log_src_pipeline'] = "cybrhunter"
-        
-                    try:
-                        print(ascii(dictobj), file=sys.stdout, flush=True)
                 
-                    except (AttributeError, TypeError, IOError) as err: 
-                        #log error here
-                        print("Error, could not print to stdout \n [-] %s" % str(err))
-                        sys.exit(1)
-            except:
-                print(ascii(dictobj), file=sys.stdout, flush=True)
-                
+            except (AttributeError, TypeError, IOError) as err: 
+                #log error here
+                self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
+                sys.exit(1)
+
+            try:
+                if output_type == 'tsv':
+                    tsv = ('\t'.join(dictobj.values()).replace('\n','').replace('  ', ' '))
+                    print(tsv, file=sys.stdout, flush=True)
+                    
+                elif output_type == 'csv':
+                    csv = (','.join(dictobj.values()).replace('\n','').replace('  ', ' '))
+                    print(csv, file=sys.stdout, flush=True)
+                    
+                elif output_type == 'json':
+                    print(ascii(dictobj), file=sys.stdout, flush=True)
+
+            except (AttributeError, TypeError, IOError) as err: 
+                #log error here
+                self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
+                sys.exit(1)
+                    
+            except Exception as err:
+                self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
+                sys.exit(1)
