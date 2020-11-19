@@ -3,15 +3,13 @@
 
 from __future__ import print_function
 __author__ = "Diego Perez <darkquasar7@gmail.com>"
-__license__ = "BSD-3-Clause"
+__license__ = "GPLv3"
 __stable__ = True
 __version__ = "3.0"
 
 import sys
 sys.path.append("cybrhunter")
 
-import cybrhunter
-from .cybrhunter import _main
 from . import helpermods
 from . import parsermods
 from . import huntmods
