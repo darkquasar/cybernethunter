@@ -1,0 +1,14 @@
+Description: Converts Windows EVTX files to XML using omerbenanram "dump_evtx" (fast EVTX converter based in Rust)
+Category: Timeline
+Author: Diego Perez (@darkquassar)
+Version: 1.0
+Id: 0598ed6e-8c97-4899-9629-d9438f07d0ed
+BinaryUrl: https://github.com/omerbenamram/evtx/releases
+ExportFormat: XML
+FileMask: '*.evtx'
+Processors:
+    -
+        Executable: cybrhunter\evtx_dump.exe
+        CommandLine: --dont-show-record-number %sourceFile% --no-confirm-overwrite
+        ExportFile: events.xml
+        ExportFormat: xml

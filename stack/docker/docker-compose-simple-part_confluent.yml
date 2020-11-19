@@ -1,0 +1,173 @@
+---
+# Author: Diego Perez (@darkquasar)
+# License: GPL-3.0
+# StreamHunter Version: 0.0.2
+# Elastic Stack Version: 7.3
+# Description: Docker Compose file for Elastic Stack
+
+version: '3.7'
+services:
+  # REF: https://raw.githubusercontent.com/elastic/stack-docker/master/docker-compose.yml
+  # Transport and HTTP TLS encryption REF: https://www.elastic.co/guide/en/elasticsearch/reference/current/configuring-tls-docker.html
+
+  # The environment variable "TAG" is used throughout this file to
+  # specify the version of the images to run. The default is set in the
+  # '.env' file in this folder. It can be overridden with any normal
+  # technique for setting environment variables, for example:
+  #
+  #   TAG=7.3 docker-compose up
+  #
+  # REF: https://docs.docker.com/compose/compose-file/#variable-substitution
+
+  cyberhunt-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${TAG}
+    container_name: cyberhunt-elasticsearch
+    ports:
+      - 9200:9200
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+      - ./config/elasticsearch/certs/:/usr/share/elasticsearch/config/certs
+      - ./config/elasticsearch/scripts/:/usr/share/elasticsearch/config/scripts
+    restart: always
+    entrypoint: config/scripts/cybrhunter-es-entrypoint.sh
+    environment:
+      - cluster.name="cybrhunter-cluster"
+      - node.name=cyberh-01
+      - discovery.type=single-node
+      #- bootstrap.memory_lock=true
+      - network.host=0.0.0.0
+      - transport.host=0.0.0.0
+      - xpack.license.self_generated.type=basic
+      - xpack.monitoring.collection.enabled=true
+      - 'ES_JAVA_OPTS=-Xms1700m -Xmx1700m'
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - cybrhunter
+    healthcheck:
+      test: curl -s https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  cyberhunt-kibana:
+    image: docker.elastic.co/kibana/kibana:${TAG}
+    container_name: cyberhunt-kibana
+    ports:
+      - 5601:5601
+    volumes:
+      - ./config/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    restart: always
+    environment: 
+      - ELASTICSEARCH_HOSTS=http://cyberhunt-elasticsearch:9200
+      - server.name="cyberhunt-kibana"
+      - xpack.reporting.capture.browser.chromium.disableSandbox=true
+    networks:
+      - cybrhunter
+    depends_on:
+      - cyberhunt-elasticsearch
+    healthcheck:
+      test: curl -s https://localhost:5601 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  cyberhunt-logstash:
+    image: docker.elastic.co/logstash/logstash:${TAG}
+    container_name: cyberhunt-logstash
+    restart: always
+    environment:
+      - config.reload.automatic=true
+      - config.reload.interval=60s
+      - http.host="0.0.0.0"
+      - xpack.monitoring.elasticsearch.hosts=http://cyberhunt-elasticsearch:9200
+      - xpack.monitoring.enabled=true
+      - 'LS_JAVA_OPTS=-Xms750m -Xmx1100m'
+    volumes:
+      - ./config/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./config/logstash/scripts:/usr/share/logstash/scripts
+    networks:
+      - cybrhunter
+    depends_on:
+      - cyberhunt-elasticsearch
+      - cyberhunt-kafka-br-1
+    #entrypoint: /usr/share/logstash/scripts/logstash-entrypoint.shS
+
+  cyberhunt-zk-1:
+    image: confluentinc/cp-zookeeper:5.3.0
+    container_name: cyberhunt-zk-1
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 22181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: 'cyberhunt-zk-1:22888:23888'
+    networks:
+      - cybrhunter
+
+  cyberhunt-kafka-br-1:
+    image: confluentinc/cp-enterprise-kafka:5.3.0
+    container_name: cyberhunt-kafka-br-1
+    depends_on:
+      - cyberhunt-zk-1
+    ports:
+      - "19092:19092"
+      - "19093:19093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'cyberhunt-zk-1:22181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Add "cyberhunt-kafka-br-1" to your HOSTS file (pointing to the IP of the Kafka Broker)
+      # or replace "cyberhunt-kafka-br-1" with the IP of your broker
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://cyberhunt-kafka-br-1:19092,PLAINTEXT_HOST://localhost:19093
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: 'cyberhunt-kafka-br-1:19092'
+      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: 'cyberhunt-zk-1:22181'
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: 'true'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - cybrhunter
+
+  cyberhunt-landoop:
+    image: landoop/kafka-topics-ui:latest
+    container_name: cyberhunt-landoop
+    depends_on:
+      - cyberhunt-zk-1
+      - cyberhunt-kafka-br-1
+    ports:
+      - 8080:8000
+    environment:
+      KAFKA_REST_PROXY_URL: 'http://cyberhunt-kafka-rest-proxy:8082'
+      PROXY: 'true'
+    networks:
+      - cybrhunter
+
+  cyberhunt-portainer:
+    image: portainer/portainer
+    container_name: cyberhunt-portainer
+    ports:
+      - 8000:8000
+      - 9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/portainer_data:/data
+    networks:
+      - cybrhunter
+
+networks:
+  cybrhunter:
+    driver: bridge
+
+volumes:
+  es_data:
+
+secrets:
+  logstash.yml:
+    file: ./config/logstash/logstash.yml

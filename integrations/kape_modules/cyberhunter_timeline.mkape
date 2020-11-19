@@ -1,0 +1,12 @@
+Description: Executes modules to extract timeline information and then feeds results into cybrhunter for Elastic Stack output 
+Category: Timeline
+Author: Diego Perez (@darkquassar)
+Version: 1
+Id: 3c5c6f07-7f51-4327-9cd9-99dacd3ad081
+ExportFormat: ""
+FileMask: ""
+Processors:
+    -
+        Executable: EVTXEcmd.mkape
+        CommandLine: ""
+        ExportFormat: "xml"

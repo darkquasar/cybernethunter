@@ -1,0 +1,92 @@
+# Author: Diego Perez (@darkquasar)
+# License: GPL-3.0
+# CYBERHUNTER Version: 0.5.1
+# Description: Dockerfile SPARK Base Image
+# Reference: adapted from https://github.com/Semantive/docker-spark
+
+
+FROM darkquasar/cyberhunter-base-jre-11:1.0
+
+LABEL maintainer="Diego Perez <@darkquasar>" cyberhunter_version="0.5.1"
+
+# *** Set Shell ***
+SHELL ["/bin/bash", "-c"]
+USER root
+
+# *** Setting up Env Variables ***
+# ********************************
+
+# Generic ENV
+ENV DEBIAN_FRONTEND noninteractive
+ENV CYBERHUNTER_DIR /opt/cyberhunter/
+ENV CYBERHUNTER_SCRIPTS /opt/cyberhunter/scripts
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+# User ENV
+ENV SPARK_USER cyberspark
+ENV HADOOP_USER cyberhadoop
+
+# Spark/Hadoop Versions
+ENV SPARK_VERSION 2.4.5
+ENV HADOOP_VERSION 2.7.3
+
+# Apache Hadoop Vars
+ENV HADOOP_HOME /opt/hadoop
+ENV HADOOP_CONF_DIR $HADOOP_HOME/etc/hadoop
+ENV PATH $PATH:$HADOOP_HOME/bin
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$HADOOP_HOME/lib/native
+
+# Apache Spark Vars
+ENV SPARK_PACKAGE spark-${SPARK_VERSION}-bin-hadoop2.7
+ENV SPARK_HOME /opt/spark
+ENV SPARK_DIST_CLASSPATH="$HADOOP_HOME/etc/hadoop/*:$HADOOP_HOME/share/hadoop/common/lib/*:$HADOOP_HOME/share/hadoop/common/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/yarn/lib/*:$HADOOP_HOME/share/hadoop/yarn/*:$HADOOP_HOME/share/hadoop/mapreduce/lib/*:$HADOOP_HOME/share/hadoop/mapreduce/*:$HADOOP_HOME/share/hadoop/tools/lib/*"
+ENV PATH $PATH:${SPARK_HOME}/bin
+
+# Python Hashseed
+ENV PYTHONHASHSEED 0
+ENV PYTHONIOENCODING UTF-8
+ENV PIP_DISABLE_PIP_VERSION_CHECK 1
+
+# *** Run Commands ***
+# ********************
+
+RUN useradd -ms /bin/bash $SPARK_USER \
+    && useradd -ms /bin/bash $HADOOP_USER \
+    && apt-get update -qq \
+    && apt-get install -qqy --no-install-recommends \
+    python3 python3-setuptools python3-pip jq \
+    && ln -s /usr/bin/python3 /usr/bin/python \
+    && apt-get -qy clean autoremove \
+    && rm -rf /var/lib/apt/lists/* \
+    # 1. Install Apache Hadoop
+    && echo "[CYBERHUNTER-DOCKER-SPARK] Installing Apache Hadoop" \
+    && mkdir $HADOOP_HOME \
+    && curl -sL --retry 3 \
+    "http://archive.apache.org/dist/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz" | tar -xvz --strip-components=1 -C $HADOOP_HOME \
+    #&& chown -R $HADOOP_USER:$HADOOP_USER $HADOOP_HOME \
+    && rm -rf $HADOOP_HOME/share/doc \
+    # 2. Install Apache Spark
+    # Use best mirror, use JQ to parse response
+    && echo "[CYBERHUNTER-DOCKER-SPARK] Installing Apache Spark" \
+    && mkdir $SPARK_HOME \
+    && curl -sL --retry 3 \
+    $(curl "https://www.apache.org/dyn/closer.lua/spark/spark-${SPARK_VERSION}/${SPARK_PACKAGE}.tgz/?as_json" | jq -r ".preferred + .path_info" | sed 's:/*$::') \
+    | tar -xvz --strip-components=1 -C $SPARK_HOME
+    #&& cd $SPARK_HOME \
+    #&& ln -s $SPARK_PACKAGE spark \
+    #&& chown -R $SPARK_USER:$SPARK_USER $SPARK_HOME
+
+# Spark Environment Config
+ENV SPARK_HOME=/opt/spark
+ENV PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip \
+    PATH=$PATH:$SPARK_HOME/bin
+
+WORKDIR $SPARK_HOME
+
+# Command to be passed in Docker-Compose
+# Master:
+# CMD ["su", "-c", "bin/spark-class org.apache.spark.deploy.master.Master", "mayaspark"]
+# Worker:
+

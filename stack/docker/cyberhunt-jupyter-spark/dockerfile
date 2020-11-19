@@ -1,0 +1,134 @@
+# Author: Diego Perez (@darkquasar)
+# License: GPL-3.0
+# CYBERHUNTER Version: 0.5.1
+# Description: Dockerfile Cyberhunter Jupyterhub and Jupyterlab for Data Analysis
+
+FROM darkquasar/cyberhunter-base-jre-11:1.0
+
+LABEL maintainer="Diego Perez <@darkquasar>" cyberhunter_version="0.5.1"
+
+# *** Set Shell ***
+SHELL ["/bin/bash", "-c"]
+
+# *** Setting up Env Variables ***
+# Generic ENV
+ENV CYBERHUNTER_DIR /opt/cyberhunter/
+ENV CYBERHUNTER_SCRIPTS /opt/cyberhunter/scripts
+
+# User ENV
+ENV JUPYTERUSER "cyberhunter"
+ENV JUPYTER_GROUP "jupyterhub"
+ENV JUPYTERUSER_TEMP_HUB_PASS "pass"
+ENV JUPYTERUSER_HOME /home/$JUPYTERUSER
+
+# Conda & Jupyter ENV
+ENV ANACONDA_DIR /opt/cyberhunter/conda3
+ENV JUPYTER_DIR /opt/cyberhunter/jupyter
+ENV JUPYTER_NOTEBOOKS_DIR /opt/cyberhunter/jupyter/notebooks
+ENV PATH $ANACONDA_DIR/bin:$PATH
+
+# Apache Spark ENV
+ENV JUPYTER_SPARK_DIR /opt/cyberhunter/jupyter/spark
+ENV APACHE_SPARK_VERSION 2.4.4
+
+# ES HADOOP ENV
+ENV ES_HADOOP_DIR /opt/cyberhunter/es-hadoop
+ENV ES_HADOOP_VERSION 7.4.0
+
+RUN groupadd -g 750 $JUPYTER_GROUP \
+    ## && randompw=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1) \ # not needed, can login as root to container
+    && useradd -m -s /bin/bash -u 750 -g $JUPYTER_GROUP $JUPYTERUSER \
+    && echo $JUPYTERUSER:$JUPYTERUSER_TEMP_HUB_PASS | chpasswd -c SHA512 \
+    && usermod -aG shadow $JUPYTERUSER \
+    && echo "[CYBERHUNTER-JUPYTERENV] User $JUPYTERUSER created with Password $randompw" \
+    && mkdir -pv $CYBERHUNTER_DIR \
+    && mkdir -pv $CYBERHUNTER_SCRIPTS \
+    && mkdir -pv $JUPYTER_DIR \
+    && mkdir -pv $JUPYTER_NOTEBOOKS_DIR \
+    && mkdir -pv $CYBERHUNTER_DIR \
+    && mkdir -pv $JUPYTER_SPARK_DIR \
+    && mkdir -pv $ES_HADOOP_DIR \
+    && chown -R $JUPYTERUSER:$JUPYTER_GROUP $CYBERHUNTER_DIR \
+    && chmod -R g+w $JUPYTER_NOTEBOOKS_DIR \
+    && apt-get update -qq \
+    && apt-get install -qqy --no-install-recommends \
+    # 1. Installing APT packages
+    wget \
+    git \
+    && apt-get -qy clean autoremove \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --chown=$JUPYTERUSER:$JUPYTER_GROUP jupyterhub-config/jupyterhub_config.py $JUPYTERUSER_HOME
+COPY jupyterhub-config/sudoers_jupyterhub /etc/sudoers.d
+
+# 2. Now let's install Miniconda and required Packages
+# Ref: https://jcrist.github.io/conda-docker-tips.html
+USER $JUPYTERUSER
+WORKDIR /home/$JUPYTERUSER
+RUN export PATH=$PATH:$ANACONDA_DIR/bin/ \
+    && mkdir -pv $JUPYTERUSER_HOME/.conda \
+    && wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda_installer.sh \
+    && /bin/bash ~/miniconda_installer.sh -b -p $ANACONDA_DIR \
+    && rm ~/miniconda_installer.sh \
+	&& . $ANACONDA_DIR/etc/profile.d/conda.sh \
+	&& conda activate base \
+    && conda init \
+    && conda config --system --prepend channels conda-forge \
+	&& conda config --system --set channel_priority strict \
+    && conda install --quiet --yes \
+        'altair' \
+        'conda-build' \
+		'cyberpandas' \
+		'dask' \
+		'elasticsearch-dsl=7.0.0' \
+		'jupyterhub' \
+        'jupyterlab' \
+        'jupytext' \
+		'kafkacat' \
+		'kafka-python' \
+		'koalas=0.18.0' \
+		'nbconvert' \
+		'notebook' \
+		'matplotlib' \
+        'pandas' \
+		'pika' \
+        'pyspark' \
+        'scikit-learn' \
+		'seaborn=0.8.1' \
+        'splunk-sdk' \
+        'sudospawner' \
+        's3contents' \
+        's3fs' \
+        #'jupyterlab_code_formatter' \
+    # 2.1 - Let's add packages not available in conda-forge
+    && python3 -m pip install ksql \
+    && python3 -m pip install jupyterhub-nativeauthenticator \
+    # && python3 -m pip install nbreport \ --> need to test, not working
+    # 2.2 - Installing JupyterLab Extensions
+    && jupyter labextension install @jupyterlab/hub-extension@1.1.3 \
+    && jupyter labextension install @mflevine/jupyterlab_html@0.1.4 \
+    && jupyter labextension install @jupyter-widgets/jupyterlab-manager@1.0 \
+    && jupyter-labextension enable @jupyter-widgets/jupyterlab-manager \
+    # && jupyter toree install --sys-prefix \ <-- must check compatibility and size
+    # 2.3 - Download and Unzip - Elasticsearch-Hadoop
+    && wget https://artifacts.elastic.co/downloads/elasticsearch-hadoop/elasticsearch-hadoop-$ES_HADOOP_VERSION.zip -P $ES_HADOOP_DIR \
+    && unzip -j $ES_HADOOP_DIR/*.zip -d $ES_HADOOP_DIR \
+    # 2.4 - Download Apache Spark
+    # && wget https://www.apache.org/dyn/closer.lua/spark/spark-$APACHE_SPARK_VERSION/spark-$APACHE_SPARK_VERSION-bin-hadoop2.7.tgz -P # $JUPYTER_SPARK_DIR \
+    # && tar -zxvf filename.tgz -C $JUPYTER_SPARK_DIR \
+    # 2.5 - Running some cleanup commands
+    && conda clean -afy \
+    && conda build purge-all \
+    && npm cache clean --force \
+	&& find $ANACONDA_DIR -follow -type f -name '*.a' -delete \
+    && find $ANACONDA_DIR -follow -type f -name '*.pyc' -delete \
+    && find $ANACONDA_DIR -follow -type f -name '*.js.map' -delete \
+    && find $ANACONDA_DIR/lib/python*/site-packages/bokeh/server/static -follow -type f -name '*.js' ! -name '*.min.js' -delete \
+    && rm -rf /home/$JUPYTERUSER/.cache/yarn \
+    && rm $ES_HADOOP_DIR/*.zip
+    # && rm $JUPYTER_SPARK_DIR/spark-$APACHE_SPARK_VERSION-bin-hadoop2.7.tgz
+
+EXPOSE 8888 8000
+
+# Start JupyterHub
+CMD [ "jupyterhub" ]

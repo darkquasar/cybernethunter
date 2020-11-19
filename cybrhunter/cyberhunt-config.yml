@@ -1,0 +1,132 @@
+---
+# ***** Config options for cybrhunter *****
+
+# NOTE: All paths are relative to the cybrhunter base dir.
+# If a tool has a 'SourceUrl' key of 'None' it means it doesn't need to be downloaded.
+# This applies to situations where one ZIP file contains many tools inside. Extracted tools
+# only need to be referenced so that the 'BinaryName' and 'BinaryMD5' is known to cybrhunter.
+
+# TODO: add CI/CD integration so that MD5 for tools in here are automatically updated on a nightly basis.
+
+tools:
+  # Common Utils
+  Common:
+    # RawCopy used to copy locked files like Registry Hives or Event Logs
+    RawCopy: 
+      ExtractDir: 'bin/RawCopy'
+      BinaryName: 'RawCopy64.exe'
+      SourceUrl: 'https://github.com/jschicht/RawCopy/raw/master/RawCopy64.exe'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  ShimParser:
+    # AppCompatCacheParser used to parse SYSTEM hive
+    AppCompatCacheParser: 
+      ExtractDir: 'bin/AppCompatCacheParser'
+      BinaryName: 'AppCompatCacheParser.exe'
+      SourceUrl: 'https://f001.backblazeb2.com/file/EricZimmermanTools/AppCompatCacheParser.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  EnventLogParser:
+    # Used to extract live event logs
+    FullEventLogView: 
+      ExtractDir: 'bin/FullEventLogView'
+      BinaryName: 'FullEventLogsView.exe'
+      SourceUrl: 'https://www.nirsoft.net/utils/fulleventlogview-x64.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  ExecutableAnalysers:
+    # Used to extract signature validation from executables
+    SigCheck: 
+      ExtractDir: 'bin/SigCheck'
+      BinaryName: 'SigCheck.exe'
+      SourceUrl: 'https://download.sysinternals.com/files/Sigcheck.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  ProcessAnalysers:
+    # Used to list all running dlls
+    ListDlls: 
+      ExtractDir: 'bin/ListDlls'
+      BinaryName: 'Listdlls64.exe'
+      SourceUrl: 'https://download.sysinternals.com/files/ListDlls.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  SessionAnalysers:
+    # Used to extract live event logs
+    LogonSessions: 
+      ExtractDir: 'bin/LogonSessions'
+      BinaryName: 'logonsessions64.exe'
+      SourceUrl: 'https://download.sysinternals.com/files/logonSessions.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  AutostartAnalysers:
+    # Used to extract live event logs
+    Autoruns: 
+      ExtractDir: 'bin/Autoruns'
+      BinaryName: 'autorunsc64.exe'
+      SourceUrl: 'https://download.sysinternals.com/files/Autoruns.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  SystemInfo:
+    # Used to extract live event logs
+    PSTools: 
+      ExtractDir: 'bin/PSTools'
+      BinaryName: 'PSTools.exe'
+      SourceUrl: 'https://download.sysinternals.com/files/PSTools.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+    PSInfo: 
+      ExtractDir: 'bin/PSTools'
+      BinaryName: 'PsInfo64.exe'
+      SourceUrl: ''
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  WebBrowserAnalysers:
+    # Used to extract live event logs
+    BrowsingHistoryView: 
+      ExtractDir: 'bin/WebBrowserAnalysers'
+      BinaryName: 'BrowsingHistoryView.exe'
+      SourceUrl: 'https://www.nirsoft.net/utils/browsinghistoryview-x64.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+    IECacheView: 
+      ExtractDir: 'bin/WebBrowserAnalysers'
+      BinaryName: 'IECacheView.exe'
+      SourceUrl: 'https://www.nirsoft.net/utils/iecacheview.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+  NetworkData:
+    # Used to extract live event logs
+    HTTPNetworkSniffer: 
+      ExtractDir: 'bin/NetworkData'
+      BinaryName: 'HTTPNetworkSniffer-x64.exe'
+      SourceUrl: 'https://www.nirsoft.net/utils/httpnetworksniffer-x64.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+    AppNetworkCounter: 
+      ExtractDir: 'bin/NetworkData'
+      BinaryName: 'AppNetworkCounter.exe'
+      SourceUrl: 'https://www.nirsoft.net/utils/appnetworkcounter-x64.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+
+    CPorts: 
+      ExtractDir: 'bin/NetworkData'
+      BinaryName: 'cports.exe'
+      SourceUrl: 'https://www.nirsoft.net/utils/cports-x64.zip'
+      ZipMD5: ''
+      BinaryMD5: ''
+    
+default: 
+  Attribute1: 1

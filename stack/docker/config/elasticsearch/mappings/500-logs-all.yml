@@ -1,0 +1,100 @@
+{
+  "order": 500,
+  "index_patterns": [ "logs-*" ],
+  "version": 20180904,
+  "settings": {
+    "index.refresh_interval": "15s",
+    "index.mapping.ignore_malformed": "true",
+    "index.mapping.coerce": "true",
+    "index.mapping.total_fields.limit": 2000
+  },
+  "mappings": {
+    "doc": {
+      "numeric_detection": true,
+      "dynamic": "true",
+      "dynamic_templates": [
+        {
+          "src_or_dst_ip_map": {
+            "match_mapping_type": "*",
+            "match": "*_ip*",
+            "mapping": {
+              "type": "ip"
+            }
+          }
+        },
+        {
+          "src_or_dst_ip_map_2": {
+            "match_mapping_type": "*",
+            "match": "ip_*",
+            "mapping": {
+              "type": "ip"
+            }
+          }
+        },
+        {
+          "src_or_dst_ip_map_3": {
+            "match_mapping_type": "*",
+            "match": "ipv4*",
+            "mapping": {
+              "type": "ip"
+            }
+          }
+        },
+        {
+          "src_or_dst_ip_map_4": {
+            "match_mapping_type": "*",
+            "match": "ipv6*",
+            "mapping": {
+              "type": "ip"
+            }
+          }
+        },
+        {
+          "Bytes_as_long_map": {
+            "match_mapping_type": "*",
+            "match": "*Byte*",
+            "mapping": {
+              "type": "long"
+            }
+          }
+        },
+        {
+          "bytes_as_long_map": {
+            "match_mapping_type": "*",
+            "match": "*byte*",
+            "mapping": {
+              "type": "long"
+            }
+          }
+        },
+        {
+          "strings_map": {
+            "match_mapping_type": "string",
+            "unmatch": "*command*",
+            "mapping": {
+              "type": "text",
+              "norms": false,
+              "analyzer": "standard",
+              "fields": {
+                "raw": {
+                  "type": "keyword",
+                  "ignore_above": 7000
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "@startTime": {"type":"date"},
+        "@systemTime": {"type":"date"},
+        "@writeTime": {"type":"date"},
+        "@EndDate": {"type":"date"},
+        "@LastVisitDate": {"type":"date"},
+        "@version": { "type": "keyword" },
+        "event_id": {"type":"long"}
+      }
+    }
+  }
+}

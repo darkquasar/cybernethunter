@@ -1,0 +1,38 @@
+# Author: Diego Perez (@darkquasar)
+# License: GPL-3.0
+# CYBERHUNTER Version: 0.5.1
+# Description: Dockerfile Cyberhunter Base Image
+# Reference: jre11 adapted from https://github.com/docker-library/openjdk/tree/86918ee28d383e7af63f535a2558040dce141099/11/jre
+
+FROM phusion/baseimage:latest-amd64
+LABEL maintainer="Diego Perez (@darkquasar)" description="Dockerfile CYBERHUNTER Base Image"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# *** Users with other locales should set this in their derivative image ***
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+ENV JAVA_HOME /docker-java-home
+ENV JAVA_INSTALL_VERSION openjdk-11-jre
+
+# *** Preparing Base Image ***
+RUN echo "[CYBERHUNTER-DOCKER-BASE-INFO] Updating Ubuntu base image" \
+    && apt-get update -qq \
+    && echo "[CYBERHUNTER-DOCKER-BASE-INFO] Installing essential tools" \
+    && apt-get install -qqy \
+    bzip2 \
+    curl \
+    file \
+    sudo \
+    unzip \
+    vim \
+    xz-utils \
+    && ln -svT "/usr/lib/jvm/java-11-openjdk-$(dpkg --print-architecture)" /docker-java-home \
+    && echo "[CYBERHUNTER-DOCKER-BASE-INFO] Installing OpenJDK JRE 11" \
+    && apt-get install -y --no-install-recommends $JAVA_INSTALL_VERSION \
+    && apt-get -qy clean autoremove \
+    && rm -rf /var/lib/apt/lists/*
+	
+CMD ["/sbin/my_init"]

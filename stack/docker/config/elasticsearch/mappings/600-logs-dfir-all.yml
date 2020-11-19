@@ -1,0 +1,34 @@
+{
+  "order": 600,
+  "index_patterns": ["logs-dfir-winevent-*"],
+  "version": 20180907,
+  "settings": {
+    "index.refresh_interval": "15s",
+    "index.mapping.ignore_malformed": "true",
+    "index.mapping.coerce": "true",
+    "index.mapping.total_fields.limit": 2000
+  },
+  "mappings": {
+    "doc": {
+      "dynamic_templates": [
+        {
+          "geo_positioning_map": {
+            "match_mapping_type": "*",
+            "match": "*geo*ip*",
+            "mapping": {
+              "properties":{
+                "dma_code":{"type":"integer"},
+                "latitude":{"type":"float"},
+                "location":{"type": "geo_point"},
+                "longitude":{"type":"float"}
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": {"type":"date"}
+      }
+    }
+  }
+}

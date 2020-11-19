@@ -1,0 +1,13 @@
+## This file should be executed by sudoers 
+## It will allow the Jupyter SudoSpawner to work properly
+## NOTE: copy this file to /etc/sudoers.d
+
+# the command(s) the Hub can run on behalf of the above users without needing a password
+Cmnd_Alias JUPYTER_CMD = /opt/cyberhunter/conda3/bin/sudospawner
+Cmnd_Alias ADDUSER_CMD = /usr/sbin/adduser
+
+# actually give the Hub user permission to run the above command on behalf
+# of the allowed users without prompting for a password
+%jupyterhub ALL=(cyberhunter) /usr/bin/sudo
+cyberhunter ALL=(%jupyterhub) NOPASSWD:JUPYTER_CMD
+cyberhunter ALL=(ALL) NOPASSWD:ADDUSER_CMD

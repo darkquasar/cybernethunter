@@ -1,0 +1,36 @@
+
+# Download the latest stable version of winlogbeat here:
+# https://www.elastic.co/downloads/beats/winlogbeat
+
+
+# *** Winlogbeat Logging Options ***
+# **********************************
+
+winlogbeat.event_logs:
+  - name: Application
+    ignore_older: 30m
+  - name: Security
+    ignore_older: 30m
+  - name: System
+    ignore_older: 30m
+  - name: Microsoft-windows-sysmon/operational
+    ignore_older: 30m
+  - name: Microsoft-windows-PowerShell/Operational
+    ignore_older: 30m
+    event_id: 4103, 4104
+  - name: Windows PowerShell
+    event_id: 400,600
+    ignore_older: 30m
+  - name: Microsoft-Windows-WMI-Activity/Operational
+    event_id: 5857,5858,5859,5860,5861
+
+# *** Winlogbeat Outputs ***
+# **************************
+
+# *** Kafka output ***
+
+output.kafka:
+  hosts: ["cyberhunt-kafka-br-1:19092"]
+  topic: "winlogbeat"
+  max_retries: 2
+  max_message_bytes: 1000000

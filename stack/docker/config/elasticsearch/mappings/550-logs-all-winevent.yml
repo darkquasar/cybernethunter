@@ -1,0 +1,125 @@
+{
+  "order": 55,
+  "index_patterns": [ "logs-dfir-winevent*", "logs-endpoint-winevent*", "logs-dfir-fireeyehx*" ],
+  "version": 20180901,
+  "settings": {
+    "index.refresh_interval": "15s",
+    "index.mapping.ignore_malformed": "true",
+    "index.mapping.coerce": "true",
+    "index.mapping.total_fields.limit": 3000,
+    "analysis": {
+      "normalizer": {
+        "lowercase_normalizer": {
+          "type": "custom",
+          "char_filter": [],
+          "filter": ["lowercase"]
+        }
+      },
+      "tokenizer": {
+        "cli-trigram": {
+          "type": "ngram",
+          "min_gram": 3,
+          "max_gram": 3
+        }
+      },
+      "filter": {
+        "arguments_delimiter_filter": {
+          "type": "word_delimiter",
+          "split_on_case_change": true,
+          "split_on_numerics": true,
+          "generate_word_parts": true,
+          "generate_number_parts": true,
+          "stem_english_possessive": false,
+          "catenate_all": true,
+          "preserve_original": true
+        },
+        "autocomplete_arguments_filter": {
+          "type": "edge_ngram",
+          "min_gram": 2,
+          "max_gram": 3000,
+          "token_chars": [ "letter" ]
+        }
+      },
+      "analyzer": {
+        "cli_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+              "arguments_delimiter_filter",
+              "lowercase"]
+        },
+        "cli_analyzer_ngram_greedy": {
+          "type": "custom",
+          "tokenizer": "cli-trigram",
+          "filter": [
+            "lowercase"]
+        },
+        "fingerprint_analyzer": {
+          "type": "fingerprint",
+          "max_output_size": 2048
+        },
+        "cli_autocomplete_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "autocomplete_arguments_filter"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "doc": {
+      "numeric_detection": true,
+      "dynamic_templates": [
+        {
+          "cli_map": {
+            "match_mapping_type": "string",
+            "match": "*command*",
+            "mapping": {
+              "type": "text",
+              "analyzer": "cli_analyzer",
+              "search_analyzer": "cli_autocomplete_analyzer",
+              "fields": {
+                "token_length_atomic": {
+                  "type": "token_count",
+                  "analyzer": "cli_analyzer_ngram_greedy"
+                },
+                "fingerprint": {
+                  "type": "text",
+                  "analyzer": "fingerprint_analyzer"
+                },
+                "raw": {
+                  "type": "keyword"
+                }
+              }            
+            }
+          }
+        },
+        {
+          "process_name_map": {
+            "match_mapping_type": "string",
+            "match": "*process*",
+            "mapping": {
+              "type": "text",
+              "analyzer": "cli_analyzer",
+              "search_analyzer": "cli_autocomplete_analyzer",
+              "fields": {
+                "raw": {
+                  "type": "keyword"
+                }
+              }            
+            }
+          }
+        }
+      ],
+      "properties": {
+        "sample_field_1": {
+          "type": "text",
+          "norms": false,
+          "analyzer": "cli_analyzer" 
+        }
+      }
+    }
+  }
+}
