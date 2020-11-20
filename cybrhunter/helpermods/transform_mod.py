@@ -1,122 +1,56 @@
 #!/usr/bin/env python3
 
 '''
- NAME: multiparser.py | Version: 0.3
+ NAME: transformer_mod.py | version: 0.1
  CYBRHUNTER Version: 0.3
- AUTHOR: Diego Perez (@darkquasar) - 2018
- DESCRIPTION: This module will provide miscellaneous parsing capabilities for records.
- 
- USAGE: 
+ AUTHOR: Diego Perez (@darkquasar) - 2019
+ DESCRIPTION: Collection of helper modules to facilitate some data transformation tasks.
     
- UPDATES: 
-    v0.1: parse any XML to a flat dict.
-    v0.2: parse any CSV to a flat dict.
-    v0.3 - 03-09-2019 - added ability to parse multi-line CSV file into single-line CSV file. Kind of redundant since I discovered later that PANDAS can do it by default.
-    v0.4 - 19-11-2020 - Cleaned up this parser, removed XML parsing routines to its own mod
+ Updates: 
+        v0.1 - 17-06-2019 - Created script.
     
  ToDo:
-        1. make an argument that will call a shell script that will automagically run evtxexport and output parsed files to a folder
+        1. ----.
 
 '''
 
-import csv
-import json
 import logging
+import numpy as np
 import os
 import pandas as pd
 import re
+import shutil
+import subprocess
 import sys
-import time
-import xml.etree.cElementTree as ET
-from collections import defaultdict
-from datetime import datetime as datetime
+import yaml
 from pathlib import Path
-from time import strftime
 
 
-# *** Setup logging ***
-logger = logging.getLogger('MULTIPARSER')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-console_handler.setLevel(logging.DEBUG)
-logger.addHandler(console_handler)
-logger.setLevel(logging.DEBUG)
+class HelperMod:
 
-
-'''
-# can't use until I fix kafka logging verbosity
-try:
-    import coloredlogs
-    coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG")
-    
-except ModuleNotFoundError:
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.DEBUG)
-    logger.addHandler(console_handler)
-    logger.setLevel(logging.INFO)
-'''
-
-class MultiParser():
-
-    def __init__(self, logtype, filepath):
-        # initializing variables
-        self.logtype = logtype
-        self.filepath = filepath
-      
-    def parser(self):
-        '''
-        This function will allow us to add data to the main Dictionary. Thanks: https://stackoverflow.com/questions/32278823/iterating-over-children-of-a-particular-tag-using-elementtree
-        '''
-
-        if self.logtype == 'csv':
-            row_iterator = pd.read_csv(self.filepath, engine="c", chunksize=1)
-            for row in row_iterator:
-                yield self.csv_to_json(row.to_dict(orient='records')[0])    
-
-        '''
-        # Using this method with the "csv" module is magnitudes faster than 
-        # using Pandas, however I can't find a solution to the "null bytes" (\x00)
-        # that can sometimes be mixed up in the row data
-    
-        if self.logtype == 'csv':
-            with open(self.filepath, 'r') as csvfile:
-                self.reader = csv.DictReader(csvfile)
-                for row in self.reader:
-                    try:
-                        yield self.csv_to_json(row)
-                    except:
-                        pass
-        '''
-
-    def csv_to_json(self, row):
+    def __init__(self):
         
-        # we are giving this action a function of its own in case we want to perform 
-        # some pre-processing on the csv records before sending them to the output pipe
-    
-        # Let's cleanup keys with non-ascii characters
-        # Making a copy of the dict since we can't iterate and modify it at the same time
-        row_2 = row.copy()
-    
-        for key in row.keys():
-            if re.match(r'[^\x00-\x7f]', key):
-                clean_key = re.sub(r'[^\x00-\x7f]', r'', key)
-                # Let's remove the non-ascii key from the copied object
-                row_2.pop(key)
-                row_2[clean_key] = row[key]
-                row_2.move_to_end(clean_key, last=False)
-            
-        # Tagging
-        row_2['log_src_pipe'] = "cybrhunter-dfir-csv"
-    
-        return dict(row_2)
-    
+        # Setup logging
+        # We need to pass the "logger" to any Classes or Modules that may use it 
+        # in our script
+        try:
+            import coloredlogs
+            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.TRANSFORM')
+            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
+
+        except ModuleNotFoundError:
+            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.TRANSFORM')
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.DEBUG)
+            self.logger.addHandler(console_handler)
+            self.logger.setLevel(logging.INFO)
+
     def convert_multilines_to_singlelines(self, file):
-        # This function is not yet completed, idea is to convert multiline output from Kape RECmd files like OpenPIDMRU to single lines
-        # KAPE's "batch" mkape module produces good output but with these caveats. Must convert to absolute single-line CSVs so that 
-        # we can send to elasticsearch
+    # This function is not yet completed, idea is to convert multiline output from Kape RECmd files like OpenPIDMRU to single lines
+    # KAPE's "batch" mkape module produces good output but with these caveats. Must convert to absolute single-line CSVs so that 
+    # we can send to elasticsearch
 
         with open(file, newline='', encoding='utf-8') as csvfile:
 
@@ -133,7 +67,7 @@ class MultiParser():
                 pattern_3_quotes_at_start = re.compile('^\",', re.MULTILINE)
                 # Capture everything after '"' that doesn't have an ending '"'
                 pattern_4_capture_unfinished_string = re.compile(',(\".*?)$')
-    
+
                 # Setup initial variables
                 line_start = []
                 line_end = []
@@ -142,10 +76,10 @@ class MultiParser():
                 line_offset_count = []
                 lines_to_skip_total = []
                 skip_next_line_from_new_file = False
-    
+
                 # Read one line from the file
                 line = csvfile.readline()
-    
+
                 while line:
                     # Let's capture the line number
                     line_number = line_number + 1

@@ -6,7 +6,7 @@
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: This module will parse XML records into JSON
  USAGE: 
-    
+
  UPDATES: 
     v0.1: 19-11-2020 - Created file from initial multiparser
     
@@ -25,30 +25,6 @@ import xml.etree.cElementTree as ET
 from collections import defaultdict
 from pathlib import Path
 
-# *** Setup logging ***
-logger = logging.getLogger('XMLPARSER')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-console_handler.setLevel(logging.DEBUG)
-logger.addHandler(console_handler)
-logger.setLevel(logging.DEBUG)
-
-'''
-# can't use until I fix kafka logging verbosity
-try:
-    import coloredlogs
-    coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG")
-    
-except ModuleNotFoundError:
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.DEBUG)
-    logger.addHandler(console_handler)
-    logger.setLevel(logging.INFO)
-'''
-        
 class Help():
     '''
     When invoked from commandline, this class will return help
@@ -63,9 +39,28 @@ class Help():
     parsed .evtx file. It will also remove data that creates a malformed XML file thus making it easier for MULTIPARSER.PY to operate on the returned files. The 2nd line will remove any files that don't contain any records.
     '''
 
-class parsermod():
+class ParserMod():
 
     def __init__(self, filepath, xmlparsetype='flat'):
+        
+        # Setup logging
+        # We need to pass the "logger" to any Classes or Modules that may use it 
+        # in our script
+        try:
+            import coloredlogs
+            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.XML')
+            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
+
+        except ModuleNotFoundError:
+            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.XML')
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.DEBUG)
+            self.logger.addHandler(console_handler)
+            self.logger.setLevel(logging.INFO)
+        
+        
         # initializing variables
         # xmlparsetype identifies whether the resulting json record should be flat or nested
         self.xmlparsetype = xmlparsetype
@@ -77,7 +72,7 @@ class parsermod():
         This function will allow you to parse an XML of n-depth to a dict object. The results won't be exportable to a TSV or sqlite3 file due to the nested nature of it, but they will be ready for ELK! The function has been optimized so that it consumes the same (negligent) amount of RAM and will log to stdout by default. 
         '''
         
-        logger.info('Parsing data from {}'.format(self.filepath))
+        self.logger.info('Parsing data from {}'.format(self.filepath))
     
         # compiling a RegEx that will aid in the removal of badly configured schema leftovers
         self.schema_info = re.compile('{.*?}')

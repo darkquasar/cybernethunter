@@ -1,6 +1,6 @@
 '''
 MODULE NAME: standard_parser.py | Version: 0.3
-CYBRHUNTER Version: 0.1
+CYBRHUNTER Version: 0.3
 AUTHOR: Diego Perez (@darkquassar) - 2018
 DESCRIPTION: This is the default module executed when no particular parser mod is passed to cybrhunter.py.
 It can be used as a template of how parser mods should be construed. The default module prints results back to stdout in json format.
@@ -8,27 +8,34 @@ It can be used as a template of how parser mods should be construed. The default
 
 import logging
 
-# *** Setup logging ***
-logger = logging.getLogger('STANDARD_PARSER')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
-console_handler.setLevel(logging.DEBUG)
-logger.addHandler(console_handler)
-logger.setLevel(logging.DEBUG)
-
 # All parsermods have a class called "parsermod" and define
 # any initialization parameters inside.
 # Parsermods can have any number of functions inside the "parsermod" class.
-class parsermod:
+class ParserMod():
 
-    def __init__(self, logtype, filepath=None, **kwargs):
-  
+    def __init__(self, log_type, file_path=None, **kwargs):
+
+        # Setup logging
+        # We need to pass the "logger" to any Classes or Modules that may use it 
+        # in our script
+        try:
+            import coloredlogs
+            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.CSV')
+            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
+
+        except ModuleNotFoundError:
+            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.CSV')
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.DEBUG)
+            self.logger.addHandler(console_handler)
+            self.logger.setLevel(logging.INFO)
+
         # Initializing variables
-        logger.info('Initializing {}'.format(__name__))
-        self.logtype = logtype
-        self.filepath = filepath
-
+        self.logger.info('Initializing {}'.format(__name__))
+        self.log_type = log_type
+        self.file_path = file_path
 
     # All parsermods must contain an "execute" function that will initiate the parsing action on each 
     # record. Other functions can be defined in this module that do the actual heavy lifting
@@ -39,26 +46,6 @@ class parsermod:
 
         # Instantiating the Parser
         self.parser = "some mod instance"
-        self.results = self.parser.parser()
+        self.results = "stuff"
 
         return self.results
-      
-    def runpipe(self, results):
-        logger.info('Running records through output pipe')
-        try:
-            while True:
-                record = results.__next__()
-                if record == None:
-                    continue
-                self.outpipe.open_output_pipe(record)
-
-        except StopIteration:
-            pass
-
-        finally:
-            self.close()
-            self.outpipe.close_output_pipe()
-    
-    def close(self):
-        # Method that gets called by cybrhunter.py to close a pipe
-        logger.info('Closing Module {}'.format(__name__))

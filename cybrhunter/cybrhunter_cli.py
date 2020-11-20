@@ -29,12 +29,12 @@ from time import strftime
 # or (3) from the source directory as `python cybrhunter.py`
 if "cybrhunter" in sys.modules:
     from cybrhunter.outputmods import output as cyout
-    from cybrhunter.parsermods import multi_parser as cymp
     from cybrhunter.parsermods import xml_parser as cyxml
+    from cybrhunter.parsermods import csv_parser as cycsv
 else:
     from outputmods import output as cyout
-    from parsermods import multi_parser as cymp
     from parsermods import xml_parser as cyxml
+    from parsermods import csv_parser as cycsv
 
 class Arguments(object):
     
@@ -75,31 +75,48 @@ class Arguments(object):
                 default="127.0.0.1 9092 logstash",
                 required=False
                 )
-        
+
         self.parser.add_argument(
-                "-l", "--logtype",
+                "-l", "--log-type",
                 help="This option specifies the type of log being ingested. Type ""xml"" requires a file in XML format with proper wrapping (opening and closing top-level root node). Type csv requires a ""csv"" file in ASCII format.",
                 type=str,
                 choices=["xml", "csv"],
                 default="xml",
                 required=False
                 )
-        
+
         self.parser.add_argument(
                 "-m", "--module",
                 help="Use a module to perform ETL operations on target files",
                 type=str,
-                choices=["standard_parser", "xml_parser"],
+                choices=["standard_parser", "xml_parser", "csv_parser"],
                 default="standard_parser",
+                required=False
+                )
+        
+        self.parser.add_argument(
+                "-of", "--output-file",
+                help="Name for the output file if this output pipe is selected",
+                type=str,
+                default=None,
                 required=False
                 )
 
         self.parser.add_argument(
-                "-o", "--output",
-                help="Type of output: stdout-csv, stdout-json, kafka, rabbitmq, elasticsearch",
+                "-op", "--output-pipe",
+                help="Pipe of output: stdout, file, kafka, rabbitmq, elasticsearch",
                 type=str,
-                choices=["stdout-tsv", "stdout-csv", "stdout-json", "rabbitmq", "kafka", "elasticsearch"],
-                default="stdout-json",
+                choices=["stdout", "file", "rabbitmq", "kafka", "elasticsearch"],
+                default="stdout",
+                required=False
+                )
+
+        self.parser.add_argument(
+                "-ot", "--output-type",
+                help="Type of output: csv, tsv, json, sqlite",
+                type=str,
+                choices=["tsv", "csv", "json", "sqlite"],
+                default="json",
                 required=False
                 )
 
@@ -118,7 +135,7 @@ class Arguments(object):
                 default="127.0.0.1 9501",
                 required=False
                 )
-        
+
         self.parser.add_argument(
                 "-x", "--xmlparsetype",
                 help="This option determines how the target XML file is parsed. When ""flat"" is selected, the XML will be converted to a flat json. When ""nested"" is selected, the XML will be converted to a nested json resembling the structure of the original XML. If two or more elements within the nested dictionary are equal, they will be embedded within a list.",
@@ -129,12 +146,12 @@ class Arguments(object):
                 )
 
         self.pargs = self.parser.parse_args()
-      
+
     def get_args(self):
         return self.pargs
-    
+
 class cyh_helpers:
-    
+
     def __init__(self):
 
         # Setup logging
@@ -144,7 +161,7 @@ class cyh_helpers:
             import coloredlogs
             self.logger = logging.getLogger('CYBRHUNTER')
             coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
-        
+
         except ModuleNotFoundError:
             self.logger = logging.getLogger('CYBRHUNTER')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
@@ -153,18 +170,17 @@ class cyh_helpers:
             console_handler.setLevel(logging.DEBUG)
             self.logger.addHandler(console_handler)
             self.logger.setLevel(logging.INFO)
-    
+
     # Define an "init_output_pipe" function that will initialize the output pipe for the records processed by the parsermods.
-    def init_output_pipe(self, output, logtype, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None):
+    def init_output_pipe(self, output_pipe, output_type, output_file=None, log_type=None, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None):
         # Helper function to initialize an output pipe
-        
-        self.output = output
+
         self.kafka_broker = kafka_broker.split(" ")
         self.rabbitmq_broker = rabbitmq_broker.split(" ")
         self.rabbitmq_credentials = rabbitmq_credentials.split(" ")
 
-        self.output_pipe = cyout.Output(self.output, logtype, kafka_broker=self.kafka_broker, rabbitmq_broker=self.rabbitmq_broker, rabbitmq_credentials=self.rabbitmq_credentials)
-        
+        self.output_pipe = cyout.Output(output_pipe=output_pipe, output_type=output_type, output_file=output_file, log_type=log_type, kafka_broker=self.kafka_broker, rabbitmq_broker=self.rabbitmq_broker, rabbitmq_credentials=self.rabbitmq_credentials)
+
     def send_to_optput_pipe(self, data):
         # Helper function to iterate over a generator and send each record through the output pipe
 
@@ -195,22 +211,24 @@ class cyh_helpers:
             # to avoid having to clean the list of files inside a folder later on. 
             # CASE 1: logtype is "csv", we only want to keep a list of files that 
             # are csv files
-            if pargs.logtype == "csv":
+            if pargs.log_type == "csv":
                 file_type_filter = ".csv"
-            elif pargs.logtype == "xml":
+            elif pargs.log_type == "xml":
                 file_type_filter = ".xml"
+            else:
+                file_type_filter = ""
         
             try:
                 targetfiles = [f for f in filepath.iterdir() if Path.is_file(f) and file_type_filter in f.suffix]    
             except FileNotFoundError:
-                self.logger.info('Please select a valid filename or directory')
+                self.logger.Error('Please select a valid filename or directory')
 
         return targetfiles
-    
+
 def main():
-    
+
     helpers = cyh_helpers()
-    
+
     # Capture arguments    
     args = Arguments(sys.argv)
     pargs = args.get_args()
@@ -226,19 +244,34 @@ def main():
 
         # Obtain a list of all target files
         targetfiles = helpers.list_targetfiles(pargs)
-    
+
         # Iterating over the results and closing pipe at the end    
         for file in targetfiles:
+            
+            # Running a check to determine whether we have a file name for the output if a file pipe is selected
+            if pargs.output_pipe == 'file' and pargs.output_file == None:
+                helpers.logger.error("You must specify a --output-file parameter if you are choosing a file output pipe")
+                sys.exit()
+
             # Start an output pipe
-            helpers.init_output_pipe(pargs.output, pargs.logtype, kafka_broker=pargs.kafka_broker, rabbitmq_broker=pargs.rabbitmq_broker, rabbitmq_credentials=pargs.rabbitmq_credentials)
+            helpers.init_output_pipe(
+                output_pipe=pargs.output_pipe,
+                output_type=pargs.output_type,
+                output_file=pargs.output_file,
+                log_type=pargs.log_type,
+                kafka_broker=pargs.kafka_broker,
+                rabbitmq_broker=pargs.rabbitmq_broker,
+                rabbitmq_credentials=pargs.rabbitmq_credentials
+            )
+
             # Load the required parsermod
             load_parser_mod = importlib.import_module("." + pargs.module, "parsermods")
-            parsermod = load_parser_mod.parsermod(file)
+            parsermod = load_parser_mod.ParserMod(file)
             # Execute parsermod
             results = parsermod.execute()
             # Send records to output pipe
             helpers.send_to_optput_pipe(results)
-    
+
             '''
             try:
                 while True:
@@ -262,11 +295,11 @@ def main():
 
         # Obtain a list of all target files
         targetfiles = helpers.list_targetfiles(pargs)
-    
+
         # Iterating over the results and closing pipe at the end    
         for file in targetfiles:
             parsermod = importlib.import_module("." + pargs.module, "parsermods")
-            parsermod = parsermod.parsermod(pargs.logtype, file, pargs.output, collect=True)
+            parsermod = parsermod.ParserMod(pargs.logtype, file, pargs.output, collect=True)
             parsermod.execute()
             parsermod.runpipe(parsermod.results)
 
@@ -276,7 +309,7 @@ def main():
         # to the "jaguarhunter" (imports PySpark) module inside huntmods. This module(s) will load the template
         # and produce an ElasticSearch Index as output
         print("TBD")
-    
+
     # Capturing end time for debugging purposes
     et = datetime.now()
     end_time = strftime("%Y-%m-%d %H:%M:%S", time.localtime())

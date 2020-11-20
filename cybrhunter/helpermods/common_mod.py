@@ -2,8 +2,8 @@
 
 '''
  NAME: commonmods.py | version: 0.2
- CYBRHUNTER Version: 0.1
- AUTHOR: Diego Perez (@darkquasar) - 2019
+ CYBRHUNTER Version: 0.3
+ AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: Collection of helper modules to facilitate specific tasks in CYBRHUNTER like: downloading the tools required for artefact acquisition, copying a file using raw disk access, etc.
     
  Updates: 
@@ -26,7 +26,8 @@ import zipfile
 from pathlib import Path
 
 
-class common:
+class HelperMod:
+    
     def __init__(self):
         
         # Setup logging
@@ -34,22 +35,22 @@ class common:
         # in our script
         try:
             import coloredlogs
-            self.logger = logging.getLogger('CYBRHUNTER.COMMONMODS')
+            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.COMMON')
             coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
 
         except ModuleNotFoundError:
-            self.logger = logging.getLogger('CYBRHUNTER.COMMONMODS')
+            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.COMMON')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
             console_handler.setLevel(logging.DEBUG)
             self.logger.addHandler(console_handler)
             self.logger.setLevel(logging.INFO)
-  
+
         # Initializing variables
         self.logger.info('Initializing {}'.format(__name__))
         config_file_path = Path.cwd() / "cyberhunt-config.yml"
-        self.CYBRHUNTER_config = self.load_CYBRHUNTER_config(config_file_path)
+        self.CYBRHUNTER_config = self.load_cybrhunter_config(config_file_path)
 
     def get_cyberhunt_tools(self):
 
@@ -58,7 +59,7 @@ class common:
         # Download Tools
         # tools = self.extract_key_dict("tools", self.CYBRHUNTER_config).__next__()
         tools_dict = self.CYBRHUNTER_config['tools']
-    
+
         for kitem, vitem in tools_dict.items():
             # tool: ex. "RawCopy", "AppCompatCacheParser", etc.
             for ktool, vtool in tools_dict[kitem].items():
@@ -69,7 +70,7 @@ class common:
                     wget.download(tools_dict[kitem][ktool]['SourceUrl'], str(target_path))
                 except ValueError:
                     continue
-          
+
                 # Now let's unzip the tools if they should be unzipped
                 extracted_tool_name = Path(tools_dict[kitem][ktool]['SourceUrl'])
                 extracted_tool_path = target_path / extracted_tool_name.name
@@ -110,7 +111,7 @@ class common:
                             # shutil.rmtree(fileobj)
                         except Exception as e:
                                 print(e)
-        
+
                 if return_handle == False:
                     return
                 else:
@@ -121,7 +122,7 @@ class common:
         # If the parameter passed as "path" is a path to a file, return the file path itself back
         # to the calling function, otherwise, if the path is a directory, return the list of all files
         # (only the files)
-    
+
         # Converting the path string to pathlib.Path() object
         path = Path(path)
 
@@ -171,7 +172,7 @@ class common:
         CYBRHUNTER_base_dir = Path.cwd()
 
         cfg = self.CYBRHUNTER_config
-    
+
         # Loading CYBRHUNTER.yml will return a list of 3 elements, the first one [0] represents
         # the folder where the tool will be extracted relative to CYBRHUNTER's base directory, 
         # the second one [1] represents the name of the executable and finally the 
@@ -201,7 +202,7 @@ class common:
 
         # TODO: improve this function by collecting all file names at the beginning
         # so as to not have to iterate over each file for a simple string match
-    
+
         # Open the ZIP file
         self.logger.info('Accessing Zip file {}'.format(src))
         with zipfile.ZipFile(src, 'r') as zipf:
@@ -233,5 +234,3 @@ class common:
                                 NT_MAGIC_DAT = b'\x72\x65\x67\x66'
                                 if NT_MAGIC_DAT == fileitem.read(4):
                                     zipf.extract(zfile, dst)
-
-
