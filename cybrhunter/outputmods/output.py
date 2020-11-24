@@ -25,6 +25,7 @@ import sqlite3
 import sys
 import unicodedata
 
+from cybrhunter.helpermods import utils_mod
 from kafka import KafkaProducer
 from pprint import pprint
 from tabulate import tabulate
@@ -36,21 +37,9 @@ class Output:
     def __init__(self, output_type='json', output_pipe='stdout', output_file=None, log_type=None, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None, host_name=None):
         
         # Setup logging
-        # We need to pass the "logger" to any Classes or Modules that may use it 
-        # in our script
-        try:
-            import coloredlogs
-            self.logger = logging.getLogger('CYBRHUNTER.OUTPUT')
-            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
-
-        except ModuleNotFoundError:
-            self.logger = logging.getLogger('CYBRHUNTER.OUTPUT')
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            console_handler.setLevel(logging.DEBUG)
-            self.logger.addHandler(console_handler)
-            self.logger.setLevel(logging.INFO)
+        utils = utils_mod.HelperMod()
+        self.logger = utils.get_logger('CYBRHUNTER.OUTPUT')
+        self.logger.info('Initializing {}'.format(__name__)) 
     
         # To be used in sqlite/elasticsearch output
         self.host_name = host_name

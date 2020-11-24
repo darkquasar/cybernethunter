@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
- NAME: commonmods.py | version: 0.2
+ NAME: utils_mod.py | version: 0.2
  CYBRHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: Collection of helper modules to facilitate specific tasks in CYBRHUNTER like: downloading the tools required for artefact acquisition, copying a file using raw disk access, etc.
@@ -35,8 +35,20 @@ class HelperMod:
         # in our script
         try:
             import coloredlogs
+            
+            FIELD_STYLES = dict(
+                asctime=dict(color='green'),
+                levelname=dict(color='cyan'),
+                name=dict(color='cyan')
+            )
+
             self.logger = logging.getLogger('CYBRHUNTER.HELPERS.COMMON')
-            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
+            coloredlogs.install(
+                fmt='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                level="DEBUG",
+                field_styles=FIELD_STYLES,
+                logger=self.logger
+            )
 
         except ModuleNotFoundError:
             self.logger = logging.getLogger('CYBRHUNTER.HELPERS.COMMON')
@@ -47,10 +59,40 @@ class HelperMod:
             self.logger.addHandler(console_handler)
             self.logger.setLevel(logging.INFO)
 
-        # Initializing variables
-        self.logger.info('Initializing {}'.format(__name__))
+        # Initializing variables        
         config_file_path = Path.cwd() / "cyberhunt-config.yml"
-        self.CYBRHUNTER_config = self.load_cybrhunter_config(config_file_path)
+        
+    def get_logger(self, logger_name:str):
+        # Setup logging 
+        # We need to pass the "logger" to any Classes or Modules that may use it 
+        # in our script
+        try:
+            import coloredlogs
+            
+            FIELD_STYLES = dict(
+                asctime=dict(color='green'),
+                levelname=dict(color='cyan'),
+                name=dict(color='cyan')
+            )
+
+            self.logger = logging.getLogger(logger_name)
+            coloredlogs.install(
+                fmt='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                level="DEBUG",
+                field_styles=FIELD_STYLES,
+                logger=self.logger
+            )
+
+        except ModuleNotFoundError:
+            self.logger = logging.getLogger(logger_name)
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.DEBUG)
+            self.logger.addHandler(console_handler)
+            self.logger.setLevel(logging.INFO)
+            
+        return self.logger
 
     def get_cyberhunt_tools(self):
 
@@ -187,11 +229,12 @@ class HelperMod:
 
     def load_cybrhunter_config(self, config_path):
         # This function will load cyberhunt-config.yml
+        
         self.logger.info('Loading CYBRHUNTER Config at {}'.format(config_path))
 
         with open(config_path, 'r') as conf:
             try:
-                return yaml.load(conf)
+                self.CYBRHUNTER_config = yaml.load(conf)
             except yaml.YAMLError as e:
                 print(e)
 

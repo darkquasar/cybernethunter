@@ -20,6 +20,7 @@ import logging
 import os
 import sys
 import time
+
 from datetime import datetime as datetime
 from pathlib import Path
 from time import strftime
@@ -28,10 +29,12 @@ from time import strftime
 # (1) imported as a package, (2) run from commandline with `python -m cybrhunter`
 # or (3) from the source directory as `python cybrhunter.py`
 if "cybrhunter" in sys.modules:
+    from cybrhunter.helpermods import utils_mod
     from cybrhunter.outputmods import output as cyout
     from cybrhunter.parsermods import xml_parser as cyxml
     from cybrhunter.parsermods import csv_parser as cycsv
 else:
+    from helpermods import utils_mod
     from outputmods import output as cyout
     from parsermods import xml_parser as cyxml
     from parsermods import csv_parser as cycsv
@@ -89,11 +92,11 @@ class Arguments(object):
                 "-m", "--module",
                 help="Use a module to perform ETL operations on target files",
                 type=str,
-                choices=["standard_parser", "xml_parser", "csv_parser"],
+                choices=["standard_parser", "xml_parser", "csv_parser", "dns_debug_logs_parser"],
                 default="standard_parser",
                 required=False
                 )
-        
+
         self.parser.add_argument(
                 "-of", "--output-file",
                 help="Name for the output file if this output pipe is selected",
@@ -155,21 +158,8 @@ class cyh_helpers:
     def __init__(self):
 
         # Setup logging
-        # We need to pass the "logger" to any Classes or Modules that may use it 
-        # in our script
-        try:
-            import coloredlogs
-            self.logger = logging.getLogger('CYBRHUNTER')
-            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
-
-        except ModuleNotFoundError:
-            self.logger = logging.getLogger('CYBRHUNTER')
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            console_handler.setLevel(logging.DEBUG)
-            self.logger.addHandler(console_handler)
-            self.logger.setLevel(logging.INFO)
+        utils = utils_mod.HelperMod()
+        self.logger = utils.get_logger('CYBRHUNTER')
 
     # Define an "init_output_pipe" function that will initialize the output pipe for the records processed by the parsermods.
     def init_output_pipe(self, output_pipe, output_type, output_file=None, log_type=None, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None):
@@ -185,6 +175,8 @@ class cyh_helpers:
         # Helper function to iterate over a generator and send each record through the output pipe
 
         self.logger.info('Running records through output pipe')
+        print('\n')
+
         try:
             while True:
                 record = data.__next__()

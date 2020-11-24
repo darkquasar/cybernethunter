@@ -22,6 +22,8 @@ import pandas as pd
 import re
 import sys
 import xml.etree.cElementTree as ET
+
+from cybrhunter.helpermods import utils_mod
 from collections import defaultdict
 from pathlib import Path
 
@@ -44,22 +46,9 @@ class ParserMod():
     def __init__(self, filepath, xmlparsetype='flat'):
         
         # Setup logging
-        # We need to pass the "logger" to any Classes or Modules that may use it 
-        # in our script
-        try:
-            import coloredlogs
-            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.XML')
-            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
-
-        except ModuleNotFoundError:
-            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.XML')
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            console_handler.setLevel(logging.DEBUG)
-            self.logger.addHandler(console_handler)
-            self.logger.setLevel(logging.INFO)
-        
+        utils = utils_mod.HelperMod()
+        self.logger = utils.get_logger('CYBRHUNTER.PARSERS.XML')
+        self.logger.info('Initializing {}'.format(__name__))        
         
         # initializing variables
         # xmlparsetype identifies whether the resulting json record should be flat or nested
