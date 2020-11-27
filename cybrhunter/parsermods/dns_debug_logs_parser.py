@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 
 '''
- NAME: dns_debug_logs_parser.py | Version: 0.1
+ NAME: dns_debug_logs_parser.py | Version: 0.2
  CYBRHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: This module will allow the analyst to parse Windows DNS Debug logs on demand.
+ REF: Simplified and heavily adapted from https://github.com/nerdiosity/DNSplice
  
  USAGE: 
     
  UPDATES: 
-    v0.1 - 19-11-2020 - Created script
+    v0.1 - 19-10-2018 - Created script
+    v0.2 - 24-11-2020 - Fixed domain parsing issues, integrated tldextract package, improved logging.
     
  ToDo:
-        1. Must update code to reflect domains that do not end up in ".com", for example ".com.au"
+        1. Null
 '''
 
 import logging
@@ -39,8 +41,6 @@ class ParserMod():
         self.file_path = file_path
 
     def execute(self):
-        
-        # Heavily adapted from https://github.com/nerdiosity/DNSplice/blob/master/dndns_v1.py
       
         # Initialize list for Final Dataframe
         dns_df_rows_list = []
