@@ -25,7 +25,7 @@ import sqlite3
 import sys
 import unicodedata
 
-from cybrhunter.helpermods import utils_mod
+from cybrhunter.helpermods import utils
 from kafka import KafkaProducer
 from pprint import pprint
 from tabulate import tabulate
@@ -37,8 +37,8 @@ class Output:
     def __init__(self, output_type='json', output_pipe='stdout', output_file=None, log_type=None, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None, host_name=None):
         
         # Setup logging
-        utils = utils_mod.HelperMod()
-        self.logger = utils.get_logger('CYBRHUNTER.OUTPUT')
+        utilities = utils.HelperMod()
+        self.logger = utilities.get_logger('CYBRHUNTER.OUTPUT')
         self.logger.info('Initializing {}'.format(__name__)) 
     
         # To be used in sqlite/elasticsearch output
@@ -99,6 +99,7 @@ class Output:
             pass
 
         if self.output_pipe == 'file':
+            
 
             if self.output_type in 'sqlite3':
                 # No implemented
@@ -108,15 +109,7 @@ class Output:
     def send(self, record):
 
         if self.output_pipe == 'stdout':
-
-            if self.output_type == "json":
-                self.send_to_stdout(record, output_type='json')
-
-            elif self.output_type == "csv":
-                self.send_to_stdout(record, output_type='csv')
-
-            elif self.output_type == "tsv":
-                self.send_to_stdout(record, output_type='tsv')
+            self.send_to_stdout(record, output_type=self.output_type)
 
         elif self.output_pipe == 'file':
 
@@ -164,7 +157,7 @@ class Output:
             self.send_to_elasticsearch(record, ampq=self.output_type)
 
     def send_to_tabular_file(self, record):
-            self.tabular_writter.writerow([values for values in record.values()])
+        self.tabular_writter.writerow([values for values in record.values()])
 
     def send_to_json_file(self, record):
         self.json_output_file.write(json.dumps(record))
@@ -185,6 +178,7 @@ class Output:
         elif self.output_pipe == 'file':
             if self.output_type in ['tsv', 'csv']:
                 self.tabular_output_file.close()
+
             elif self.output_type == 'json':
                 self.json_output_file.close()
 
@@ -261,54 +255,35 @@ class Output:
                     print("Error 2, could not connect to socket")
                     sys.exit(1)
     
-    def send_to_stdout(self, data_dict, output_type='tsv', nested=False):
+    def send_to_stdout(self, data, output_type='tsv', nested=False):
 
             # store non-empty keys in a list so as to only display those keys with actual values for each event category to stdout
             nonemptykey = []
 
             # Preparing the Data
-            try:    
-                if nested == False:
-                    # ensuring we get rid of empty keys
-                    for x in data_dict.keys():
-                        if data_dict[x] != '':
-                            nonemptykey.append(x)
-                    dictobj = dict({key : data_dict[key] for key in nonemptykey})
-                else:
-                    dictobj = data_dict
+            if type(data) == dict:
+                try:    
+                    if nested == False:
+                        # ensuring we get rid of empty keys
+                        for x in data.keys():
+                            if data[x] != '':
+                                nonemptykey.append(x)
+                        dictobj = dict({key : data[key] for key in nonemptykey})
+                    else:
+                        dictobj = data
 
-            except:
-                pass
-    
+                except:
+                    pass
     
             # *** SENDING DATA TO STDOUT ***
             # ******************************
-            try:
-        
-            # If ingested Log is XML
-            # Adding required fields for tagging / compatibility purposes
-                if self.log_type == 'windows_event':
-                    dictobj['log_name'] = dictobj['Channel']
-                    dictobj['log_src_pipeline'] = "cybrhunter"
-                
-            except (AttributeError, TypeError, IOError) as err: 
-                #log error here
-                self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
-                sys.exit(1)
 
             try:
-                if output_type == 'tsv':
-                    tsv_record_raw = [ str(value).replace('\n','').replace('  ', ' ') for value in dictobj.values() ]
-                    tsv_record = '\t'.join(tsv_record_raw)
-                    print(tsv_record, file=sys.stdout, flush=True)
                     
-                elif output_type == 'csv':
-                    csv_record_raw = [ str(value).replace('\n','').replace('  ', ' ') for value in dictobj.values() ]
-                    csv_record = ','.join(csv_record_raw)
-                    print(csv_record, file=sys.stdout, flush=True)
-                    
-                elif output_type == 'json':
-                    print(ascii(dictobj), file=sys.stdout, flush=True)
+                if output_type == 'json_pretty':
+                    print(json.dumps(dictobj, indent=4), file=sys.stdout, flush=True)
+                else:
+                    print(data)
 
             except (AttributeError, TypeError, IOError) as err: 
                 #log error here

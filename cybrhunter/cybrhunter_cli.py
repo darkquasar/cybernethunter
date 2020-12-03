@@ -24,17 +24,20 @@ import time
 from datetime import datetime as datetime
 from pathlib import Path
 from time import strftime
+from streamz import Stream
 
 # Ugly but workable importing solution so that the package can be 
 # (1) imported as a package, (2) run from commandline with `python -m cybrhunter`
 # or (3) from the source directory as `python cybrhunter.py`
 if "cybrhunter" in sys.modules:
-    from cybrhunter.helpermods import utils_mod
+    from cybrhunter.helpermods import utils
+    from cybrhunter.helpermods import transforms
     from cybrhunter.outputmods import output as cyout
     from cybrhunter.parsermods import xml_parser as cyxml
     from cybrhunter.parsermods import csv_parser as cycsv
 else:
-    from helpermods import utils_mod
+    from helpermods import utils
+    from helpermods import transforms
     from outputmods import output as cyout
     from parsermods import xml_parser as cyxml
     from parsermods import csv_parser as cycsv
@@ -92,7 +95,7 @@ class Arguments(object):
                 "-m", "--module",
                 help="Use a module to perform ETL operations on target files",
                 type=str,
-                choices=["standard_parser", "xml_parser", "csv_parser", "dns_debug_logs_parser"],
+                choices=["standard_parser", "xml_parser", "csv_parser", "dns_debug_logs_parser", "evtx_parser"],
                 default="standard_parser",
                 required=False
                 )
@@ -116,9 +119,9 @@ class Arguments(object):
 
         self.parser.add_argument(
                 "-ot", "--output-type",
-                help="Type of output: csv, tsv, json, sqlite",
+                help="Type of output: csv, tsv, json, json_pretty, sqlite",
                 type=str,
-                choices=["tsv", "csv", "json", "sqlite"],
+                choices=["tsv", "csv", "json", "json_pretty", "sqlite"],
                 default="json",
                 required=False
                 )
@@ -158,8 +161,9 @@ class cyh_helpers:
     def __init__(self):
 
         # Setup logging
-        utils = utils_mod.HelperMod()
-        self.logger = utils.get_logger('CYBRHUNTER')
+        self.utilities = utils.HelperMod()
+        self.transforms = transforms.HelperMod()
+        self.logger = self.utilities.get_logger('CYBRHUNTER')
 
     # Define an "init_output_pipe" function that will initialize the output pipe for the records processed by the parsermods.
     def init_output_pipe(self, output_pipe, output_type, output_file=None, log_type=None, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None):
@@ -171,12 +175,13 @@ class cyh_helpers:
 
         self.output_pipe = cyout.Output(output_pipe=output_pipe, output_type=output_type, output_file=output_file, log_type=log_type, kafka_broker=self.kafka_broker, rabbitmq_broker=self.rabbitmq_broker, rabbitmq_credentials=self.rabbitmq_credentials)
 
-    def send_to_optput_pipe(self, data):
+    def send_to_optput_pipe(self, data, output_type):
         # Helper function to iterate over a generator and send each record through the output pipe
 
         self.logger.info('Running records through output pipe')
         print('\n')
-
+        
+        '''
         try:
             while True:
                 record = data.__next__()
@@ -189,33 +194,69 @@ class cyh_helpers:
 
         finally:
             self.output_pipe.close_output_pipe()
+        '''
+
+        try:
+
+            # Setup Stream Pipeline
+            source_pipe = Stream()
+
+            if output_type == 'csv':
+                source_pipe.map(self.transforms.convert_json_record, to_type='csv').sink(self.output_pipe.send)
+                
+            elif output_type == 'tsv':
+                source_pipe.map(self.transforms.convert_json_record, to_type='tsv').sink(self.output_pipe.send)
+                
+            else:
+                source_pipe.sink(self.output_pipe.send)
+            
+            while True:
+                record = data.__next__()
+                if record == None:
+                    continue
+                
+                source_pipe.emit(record)
+
+        except StopIteration:
+            pass
+
+        finally:
+            self.output_pipe.close_output_pipe()        
+                    
+            
 
     def list_targetfiles(self, pargs):
         # Checking to see if a directory or only one file was passed in as argument
         # to "--file"
-        filepath = Path(pargs.file)
-
-        # If a single file
-        if Path.is_dir(filepath) == False:
-            targetfiles = [filepath]
-        else:
-            # We need to capture any exceptions when collecting files within a folder
-            # to avoid having to clean the list of files inside a folder later on. 
-            # CASE 1: logtype is "csv", we only want to keep a list of files that 
-            # are csv files
-            if pargs.log_type == "csv":
-                file_type_filter = ".csv"
-            elif pargs.log_type == "xml":
-                file_type_filter = ".xml"
-            else:
-                file_type_filter = ""
         
-            try:
-                targetfiles = [f for f in filepath.iterdir() if Path.is_file(f) and file_type_filter in f.suffix]    
-            except FileNotFoundError:
-                self.logger.Error('Please select a valid filename or directory')
+        # Return the path object if it's a URL
+        if '//' in pargs.file:
+            url_string = self.transforms.normalize_url(pargs.file, return_string=True)
+            target_files = [url_string]
 
-        return targetfiles
+        else:
+            file_path = Path(pargs.file)
+            # If a single file
+            if Path.is_dir(file_path) == False:
+                target_files = [file_path]
+            else:
+                # We need to capture any exceptions when collecting files within a folder
+                # to avoid having to clean the list of files inside a folder later on. 
+                # CASE 1: logtype is "csv", we only want to keep a list of files that 
+                # are csv files
+                if pargs.log_type == "csv":
+                    file_type_filter = ".csv"
+                elif pargs.log_type == "xml":
+                    file_type_filter = ".xml"
+                else:
+                    file_type_filter = ""
+            
+                try:
+                    target_files = [f for f in file_path.iterdir() if Path.is_file(f) and file_type_filter in f.suffix]    
+                except FileNotFoundError:
+                    self.logger.Error('Please select a valid filename or directory')
+
+        return target_files
 
 def main():
 
@@ -227,7 +268,7 @@ def main():
 
     # Capturing start time for debugging purposes
     st = datetime.now()
-    start_time = strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
     helpers.logger.info("Starting CYBRHUNTER Hunting Framework")
 
     # CYBRHUNTER ACTION: PARSE
@@ -260,9 +301,10 @@ def main():
             load_parser_mod = importlib.import_module("." + pargs.module, "parsermods")
             parsermod = load_parser_mod.ParserMod(file)
             # Execute parsermod
-            results = parsermod.execute()
+            record_generator = parsermod.execute()
             # Send records to output pipe
-            helpers.send_to_optput_pipe(results)
+            helpers.send_to_optput_pipe(record_generator, pargs.output_type)
+            
 
             '''
             try:
@@ -304,7 +346,6 @@ def main():
 
     # Capturing end time for debugging purposes
     et = datetime.now()
-    end_time = strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     hours, remainder = divmod((et-st).seconds, 3600)
     minutes, seconds = divmod(remainder, 60)

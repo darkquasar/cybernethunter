@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
- NAME: utils_mod.py | version: 0.2
+ NAME: utils.py | version: 0.2
  CYBRHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: Collection of helper modules to facilitate specific tasks in CYBRHUNTER like: downloading the tools required for artefact acquisition, copying a file using raw disk access, etc.

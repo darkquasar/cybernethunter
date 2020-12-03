@@ -19,33 +19,21 @@ import numpy as np
 import os
 import pandas as pd
 import re
-import shutil
-import subprocess
 import sys
 import yaml
 from pathlib import Path
 
+from cybrhunter.helpermods import utils
+from urllib.parse import urlparse
 
 class HelperMod:
 
     def __init__(self):
         
         # Setup logging
-        # We need to pass the "logger" to any Classes or Modules that may use it 
-        # in our script
-        try:
-            import coloredlogs
-            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.TRANSFORM')
-            coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
-
-        except ModuleNotFoundError:
-            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.TRANSFORM')
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            console_handler.setLevel(logging.DEBUG)
-            self.logger.addHandler(console_handler)
-            self.logger.setLevel(logging.INFO)
+        utilities = utils.HelperMod()
+        self.logger = utilities.get_logger('CYBRHUNTER.HELPERS.TRANSFORM')
+        self.logger.info('Initializing {}'.format(__name__))
 
     def convert_multilines_to_singlelines(self, file):
     # This function is not yet completed, idea is to convert multiline output from Kape RECmd files like OpenPIDMRU to single lines
@@ -65,6 +53,7 @@ class HelperMod:
                 pattern_2_quotes_no_end_same_line = re.compile('(?!,".*?",),".*?$', re.MULTILINE)
                 # Find columns that start with '"' (double quotes)
                 pattern_3_quotes_at_start = re.compile('^\",', re.MULTILINE)
+
                 # Capture everything after '"' that doesn't have an ending '"'
                 pattern_4_capture_unfinished_string = re.compile(',(\".*?)$')
 
@@ -156,3 +145,45 @@ class HelperMod:
                         newcsvfile.write("\n")
         
                     line = csvfile.readline()
+                    
+    def normalize_url(self, url, return_string=True):
+        # This function will apply some normalization to URL strings
+        
+        parsed_url_dict = urlparse(url)
+        
+        if return_string == True:
+
+            if 'github' in parsed_url_dict.netloc and not 'raw=true' in parsed_url_dict.query:
+                parsed_url = '{}://{}{}?raw=true'.format(parsed_url_dict.scheme, parsed_url_dict.netloc, parsed_url_dict.path)
+
+            else:
+                parsed_url = parsed_url_dict.geturl()
+                
+            return parsed_url
+        
+        else: 
+            return parsed_url_dict
+                
+            
+    def convert_json_record(self, json_record: dict, to_type: str ='csv'):
+        # This function will convert json records to other types like CSV, TSV
+        
+        if to_type == 'tsv':
+            tsv_record_raw = [ str(value).replace('\n','').replace('  ', ' ') for value in json_record.values() ]
+            tsv_record = '\t'.join(tsv_record_raw)
+            return tsv_record
+                    
+        elif to_type == 'csv':
+            csv_record_raw = [ str(value).replace('\n','').replace('  ', ' ') for value in json_record.values() ]
+            csv_record = ','.join(csv_record_raw)
+            return csv_record     
+        
+    def tag_json_record(self, json_record: dict, tags_dict_list: list):
+        # This function will allow us to add extra keys to a json record for tagging purposes
+        # Example:
+        #   json_record['log_name'] = json_record['Channel']
+        #   json_record['log_src_pipeline'] = 'cybrhunter'
+        
+        for dict_element in tags_dict_list:
+            for tag in dict_element:
+                json_record[tag] = dict_element[tag]

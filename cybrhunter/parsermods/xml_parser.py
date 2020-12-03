@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
- NAME: multiparser.py | Version: 0.3
+ NAME: xml_parser.py | Version: 0.3
  CYBRHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: This module will parse XML records into JSON
@@ -23,7 +23,7 @@ import re
 import sys
 import xml.etree.cElementTree as ET
 
-from cybrhunter.helpermods import utils_mod
+from cybrhunter.helpermods import utils
 from collections import defaultdict
 from pathlib import Path
 
@@ -46,8 +46,8 @@ class ParserMod():
     def __init__(self, filepath, xmlparsetype='flat'):
         
         # Setup logging
-        utils = utils_mod.HelperMod()
-        self.logger = utils.get_logger('CYBRHUNTER.PARSERS.XML')
+        utilities = utils.HelperMod()
+        self.logger = utilities.get_logger('CYBRHUNTER.PARSERS.XML')
         self.logger.info('Initializing {}'.format(__name__))        
         
         # initializing variables

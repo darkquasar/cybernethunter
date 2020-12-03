@@ -24,7 +24,7 @@ import requests
 import sys
 import time
 
-from cybrhunter.helpermods import utils_mod
+from cybrhunter.helpermods import utils
 from datetime import datetime, timedelta
 from enum import Enum
 
@@ -33,8 +33,8 @@ class Connector:
     def __init__(self):
         
         # Setup logging
-        utils = utils_mod.HelperMod()
-        self.logger = utils.get_logger('CYBRHUNTER.CONNECTORS.UMBRELLA')
+        utilities = utils.HelperMod()
+        self.logger = utilities.get_logger('CYBRHUNTER.CONNECTORS.UMBRELLA')
         self.logger.info('Initializing {}'.format(__name__))
         
     def increment_datetime_by_hour(self, timestamp:str, hours:str):

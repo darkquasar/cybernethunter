@@ -24,7 +24,7 @@ import re
 import sys
 import tldextract
 
-from cybrhunter.helpermods import utils_mod
+from cybrhunter.helpermods import utils
 from datetime import datetime
 from pathlib import Path
 
@@ -33,8 +33,8 @@ class ParserMod():
     def __init__(self, file_path):
 
         # Setup logging
-        utils = utils_mod.HelperMod()
-        self.logger = utils.get_logger('CYBRHUNTER.PARSERS.DNSDEBUGLOG')
+        utilities = utils.HelperMod()
+        self.logger = utilities.get_logger('CYBRHUNTER.PARSERS.DNSDEBUGLOG')
         self.logger.info('Initializing {}'.format(__name__))
         
         # initializing variables
