@@ -4,5 +4,6 @@
 
 from . import csv_parser
 from . import dns_debug_logs_parser
+from . import evtx_parser
 from . import standard_parser
 from . import xml_parser

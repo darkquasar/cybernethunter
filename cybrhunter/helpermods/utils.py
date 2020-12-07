@@ -278,3 +278,25 @@ class HelperMod:
                                 NT_MAGIC_DAT = b'\x72\x65\x67\x66'
                                 if NT_MAGIC_DAT == fileitem.read(4):
                                     zipf.extract(zfile, dst)
+                                    
+    def get_value_from_nested_dict(self, record:dict, nested_keys_list:list):
+        
+        # This function will return the value of a nested key in a dictionary
+        # when the depth of nested keys nor their names is known
+
+        for key in nested_keys_list:
+
+            # Get the record, zoom into it
+            record = record.get(key)
+            # Get rid of the first key since we have already used it to slice the record
+            nested_keys_list.pop(0)
+            # If we get to the end of the nested list of keys, break
+            if len(nested_keys_list) == 0:
+                break
+            
+            # Recursively call the function again, this time with a more targeted record slice
+            partial_results = self.get_value_from_nested_dict(nested_keys_list, record)
+            
+            return partial_results
+        
+        return record

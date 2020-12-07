@@ -99,7 +99,6 @@ class Output:
             pass
 
         if self.output_pipe == 'file':
-            
 
             if self.output_type in 'sqlite3':
                 # No implemented
@@ -184,112 +183,112 @@ class Output:
 
     def send_to_sqlite(self, data):
 
-            data.pop(0)
-            data.insert(0, self.hostname)
+        data.pop(0)
+        data.insert(0, self.hostname)
 
-            try:
-                self.cur.executemany("INSERT INTO StateAgentInspector (" + self.fields_asOneString + ") VALUES (" + self.fields_number + ");", [data])
+        try:
+            self.cur.executemany("INSERT INTO StateAgentInspector (" + self.fields_asOneString + ") VALUES (" + self.fields_number + ");", [data])
 
-            except Exception as e:
-                print(e)
+        except Exception as e:
+            print(e)
 
     def send_to_elasticsearch(self, data_dict, nested=False, ampq="kafka"):
-            # store non-empty keys in a list so as to only display those keys with actual values for each event category to stdout
-            nonemptykey = []
-            timestamp_fields = ['timestamp', 'Time']
 
-            # Preparing the Data
+        # store non-empty keys in a list so as to only display those keys with actual values for each event category to stdout
+        nonemptykey = []
+        timestamp_fields = ['timestamp', 'Time']
+
+        # Preparing the Data
+        try:    
+            if nested == False:
+                # ensuring we tag empty keys
+                for x in data_dict.keys():
+                    if data_dict[x] == '':
+                        data_dict[x] == 'null'
+                        #nonemptykey.append(x)
+                #dictobj = dict({key : data_dict[key] for key in nonemptykey})
+            else: 
+                dictobj = data_dict
+
+        except:
+            pass
+
+        # Pre-Processing Data
+        # (1) We need to capture the field that designates 
+        # the timestamp in each processed log so that we can
+        # rename it for ELK mappings
+        for field in timestamp_fields:
+            time_field = dictobj.get(field,0)
+            if time_field != 0:
+                dictobj['@timestamp'] = dictobj.pop(field)
+                break
+
+        # (2) We need to enrich the logs with a "log_name" field
+        # so that Logstash can identify it in the Filter/Output plugins
+        # We also need to include the hostname of the collection as an 
+        # added field for all records so that we can filter by hostname
+        # in ELK.
+
+        # Assigning a name to the log according to their collector source
+        # make sure to lowercase the string and replace any (/,\,+,[space]),
+        # otherwise elasticsearch cannot create the index
+        if self.log_type == 'windows-event':
+            dictobj['log_name'] = dictobj['Channel']
+            dictobj['log_src_pipeline'] = "cybrhunter"
+
+        if self.log_type == 'csv':
+            dictobj['log_src_pipeline'] = "cybrhunter"          
+
+        # Assigning the value of the source host where the logs were collected
+        dictobj['log_hostname'] = self.hostname
+        
+        # Sending Data
+        try: 
+            # Sending the data to ELK
+            if ampq == "kafka":
+                self.kafka_producer.send(self.kafka_topic, dictobj)
+
+            elif ampq == "rabbitmq":
+                self.channel.basic_publish(exchange='logstash-rabbitmq', routing_key='', body=(json.dumps(dictobj)).encode())
+        except: 
+            #log error here
+            print("Error 2, could not connect to socket")
+            sys.exit(1)
+    
+    def send_to_stdout(self, data, output_type='json_pretty', nested=False):
+
+        # store non-empty keys in a list so as to only display those keys with actual values for each event category to stdout
+        nonemptykey = []
+
+        # Preparing the Data
+        if type(data) == dict:
             try:    
                 if nested == False:
-                        # ensuring we tag empty keys
-                        for x in data_dict.keys():
-                                if data_dict[x] == '':
-                                        data_dict[x] == 'null'
-                                        #nonemptykey.append(x)
-                        #dictobj = dict({key : data_dict[key] for key in nonemptykey})
-                else: 
-                        dictobj = data_dict
+                    # ensuring we get rid of empty keys
+                    for x in data.keys():
+                        if data[x] != '':
+                            nonemptykey.append(x)
+                    data_dict = dict({key : data[key] for key in nonemptykey})
+                else:
+                    data_dict = data
 
             except:
-                    pass
+                pass
 
-            # Pre-Processing Data
-            # (1) We need to capture the field that designates 
-            # the timestamp in each processed log so that we can
-            # rename it for ELK mappings
-            for field in timestamp_fields:
-                    time_field = dictobj.get(field,0)
-                    if time_field != 0:
-                            dictobj['@timestamp'] = dictobj.pop(field)
-                            break
+        # *** SENDING DATA TO STDOUT ***
+        # ******************************
 
-            # (2) We need to enrich the logs with a "log_name" field
-            # so that Logstash can identify it in the Filter/Output plugins
-            # We also need to include the hostname of the collection as an 
-            # added field for all records so that we can filter by hostname
-            # in ELK.
-    
-            # Assigning a name to the log according to their collector source
-            # make sure to lowercase the string and replace any (/,\,+,[space]),
-            # otherwise elasticsearch cannot create the index
-            if self.log_type == 'windows-event':
-                dictobj['log_name'] = dictobj['Channel']
-                dictobj['log_src_pipeline'] = "cybrhunter"
+        try:
+            if output_type == 'json_pretty':
+                print(json.dumps(data_dict, indent=4), file=sys.stdout, flush=True)
+            else:
+                print(data)
 
-            if self.log_type == 'csv':
-                dictobj['log_src_pipeline'] = "cybrhunter"          
-    
-            # Assigning the value of the source host where the logs were collected
-            dictobj['log_hostname'] = self.hostname
-            
-            # Sending Data
-            try: 
-                    # Sending the data to ELK
-                    if ampq == "kafka":
-                            self.kafka_producer.send(self.kafka_topic, dictobj)
-        
-                    elif ampq == "rabbitmq":
-                            self.channel.basic_publish(exchange='logstash-rabbitmq',routing_key='',body=(json.dumps(dictobj)).encode())
-            except: 
-                    #log error here
-                    print("Error 2, could not connect to socket")
-                    sys.exit(1)
-    
-    def send_to_stdout(self, data, output_type='tsv', nested=False):
-
-            # store non-empty keys in a list so as to only display those keys with actual values for each event category to stdout
-            nonemptykey = []
-
-            # Preparing the Data
-            if type(data) == dict:
-                try:    
-                    if nested == False:
-                        # ensuring we get rid of empty keys
-                        for x in data.keys():
-                            if data[x] != '':
-                                nonemptykey.append(x)
-                        dictobj = dict({key : data[key] for key in nonemptykey})
-                    else:
-                        dictobj = data
-
-                except:
-                    pass
-    
-            # *** SENDING DATA TO STDOUT ***
-            # ******************************
-
-            try:
-                    
-                if output_type == 'json_pretty':
-                    print(json.dumps(dictobj, indent=4), file=sys.stdout, flush=True)
-                else:
-                    print(data)
-
-            except (AttributeError, TypeError, IOError) as err: 
-                #log error here
-                self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
-                sys.exit(1)
-                    
-            except Exception as err:
-                self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
-                sys.exit(1)
+        except (AttributeError, TypeError, IOError) as err: 
+            #log error here
+            self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
+            sys.exit(1)
+                
+        except Exception as err:
+            self.logger.error("Error, could not print to stdout \n [-] %s" % str(err))
+            sys.exit(1)

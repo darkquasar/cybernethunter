@@ -167,6 +167,7 @@ class cyh_helpers:
 
     # Define an "init_output_pipe" function that will initialize the output pipe for the records processed by the parsermods.
     def init_output_pipe(self, output_pipe, output_type, output_file=None, log_type=None, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None):
+
         # Helper function to initialize an output pipe
 
         self.kafka_broker = kafka_broker.split(" ")
@@ -175,53 +176,66 @@ class cyh_helpers:
 
         self.output_pipe = cyout.Output(output_pipe=output_pipe, output_type=output_type, output_file=output_file, log_type=log_type, kafka_broker=self.kafka_broker, rabbitmq_broker=self.rabbitmq_broker, rabbitmq_credentials=self.rabbitmq_credentials)
 
-    def send_to_optput_pipe(self, data, output_type):
+    def send_to_output_pipe(self, data, use_streamz=False):
         # Helper function to iterate over a generator and send each record through the output pipe
 
         self.logger.info('Running records through output pipe')
         print('\n')
-        
-        '''
-        try:
-            while True:
-                record = data.__next__()
-                if record == None:
-                    continue
-                self.output_pipe.send(record)
 
-        except StopIteration:
-            pass
+        if use_streamz == False:
 
-        finally:
-            self.output_pipe.close_output_pipe()
-        '''
+            try:
+                while True:
 
-        try:
+                    record = data.__next__()
+                    
+                    if record == None:
+                        continue
+                        
+                    if self.output_pipe.output_pipe == 'stdout':
 
-            # Setup Stream Pipeline
-            source_pipe = Stream()
+                        if self.output_pipe.output_type == 'csv':
+                            record = self.transforms.convert_json_record(record, to_type='csv')
 
-            if output_type == 'csv':
-                source_pipe.map(self.transforms.convert_json_record, to_type='csv').sink(self.output_pipe.send)
+                        elif self.output_pipe.output_type == 'tsv':
+                            record = self.transforms.convert_json_record(record, to_type='tsv')
+
+                    self.output_pipe.send(record)
+
+            except StopIteration:
+                pass
+
+            finally:
+                self.output_pipe.close_output_pipe()
+
+        else:
+
+            try:
+
+                # Setup Stream Pipeline
+                source_pipe = Stream()
+
+                if self.output_pipe.output_type == 'csv':
+                    source_pipe.map(self.transforms.convert_json_record, to_type='csv').sink(self.output_pipe.send)
+
+                elif self.output_pipe.output_type == 'tsv':
+                    source_pipe.map(self.transforms.convert_json_record, to_type='tsv').sink(self.output_pipe.send)
+                    
+                else:
+                    source_pipe.sink(self.output_pipe.send)
                 
-            elif output_type == 'tsv':
-                source_pipe.map(self.transforms.convert_json_record, to_type='tsv').sink(self.output_pipe.send)
-                
-            else:
-                source_pipe.sink(self.output_pipe.send)
-            
-            while True:
-                record = data.__next__()
-                if record == None:
-                    continue
-                
-                source_pipe.emit(record)
+                while True:
+                    record = data.__next__()
+                    if record == None:
+                        continue
+                    
+                    source_pipe.emit(record)
 
-        except StopIteration:
-            pass
+            except StopIteration:
+                pass
 
-        finally:
-            self.output_pipe.close_output_pipe()        
+            finally:
+                self.output_pipe.close_output_pipe()
                     
             
 
@@ -273,6 +287,7 @@ def main():
 
     # CYBRHUNTER ACTION: PARSE
     if pargs.action == "parse":
+
         helpers.logger.info("Starting CYBRHUNTER Parsers")
 
         # Obtain a list of all target files
@@ -303,24 +318,7 @@ def main():
             # Execute parsermod
             record_generator = parsermod.execute()
             # Send records to output pipe
-            helpers.send_to_optput_pipe(record_generator, pargs.output_type)
-            
-
-            '''
-            try:
-                while True:
-                    record = results.__next__()
-                    if record == None:
-                            continue
-                    parsermod.fileparser.outpipe.open_output_pipe(record)
-
-            except StopIteration:
-                pass
-
-            finally:
-                parsermod.close()
-                parsermod.fileparser.outpipe.close_output_pipe()
-            '''
+            helpers.send_to_output_pipe(record_generator, use_streamz=False)
 
     # CYBRHUNTER ACTION: COLLECT
     if pargs.action == "collect":
