@@ -24,7 +24,7 @@ import time
 from cybrhunter.helpermods import utils
 from streamz import Stream
 
-class Connector:
+class Streamer:
     
     def __init__(self):
         

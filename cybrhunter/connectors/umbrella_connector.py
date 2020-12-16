@@ -91,14 +91,44 @@ class Connector:
         else:
             return data_dict['data']
         
-    def get_umbrella_api_activity_dataframe(self, start_time:str, end_time:str, time_incremental:str, org_id:str, bearer_token:str, api_endpoint: umbrella_api_activity_endpoint, records_limit:int, domains_filter:list=[], return_columns:list=['timestamp', 'externalip', 'domain'], time_zone:str='Australia/Brisbane'):
+    def get_umbrella_api_activity_dataframe(self, start_time:str, end_time:str, hours_time_incremental:int, org_id:str, bearer_token:str=None, api_endpoint: umbrella_api_activity_endpoint, records_limit:int, domains_filter:list=[], return_columns:list=['timestamp', 'externalip', 'domain'], time_zone:str='Australia/Brisbane'):
         
         # Example start_time = '2020-02-18T00:00:00'
         # Example end_time = '2020-03-18T00:00:00'
         # Example return_columns for the dataframe: ['timestamp', 'externalip', 'domain', 'verdict']
         # Example Time Zone value: 'Australia/Melbourne'
 
-        time_incremental = self.increment_datetime_by_hour(start_time, hours=6)
+        '''
+        Example calling this function from JupyterNotebooks
+        
+        from cybrhunter.connectors import umbrella_connector as cyh_umbrella
+        umb = cyh_umbrella.Connector()
+        umb.umbrella_authenticate("YOUR_BASE64_TOKEN_HERE")
+        domains_filter = ["avsvmcloud.com", "digitalcollege.org", "freescanonline.com", "deftsecurity.com", "highdatabase.com", "thedoccloud.com", "virtualdataserver.com", "incomeupdate.com", "zupertech.com", "databasegalore.com", "panhardware.com", "websitetheme.com"]
+
+        start_time = '2020-03-01T00:00:00'
+        end_time = '2020-12-16T10:00:00'
+
+        umb_df = umb.get_umbrella_api_activity_dataframe(
+                    start_time=start_time,
+                    end_time=end_time,
+                    hours_time_incremental=6,
+                    org_id=XXXXXXX,
+                    api_endpoint=umb.umbrella_api_activity_endpoint.dns,
+                    records_limit=5000,
+                    domains_filter=domains_filter,
+                    return_columns=['timestamp', 'externalip', 'domain'],
+                    time_zone='Australia/Melbourne')
+        '''
+
+        if not self.umbrella_bearer_token and bearer_token == None:
+            self.logger.error('Please provide a Base64 Encoded Bearer Token or run umbrella_authenticate before calling this function')
+            break
+        
+        elif not self.umbrella_bearer_token and bearer_token != None:
+            self.umbrella_bearer_token = bearer_token
+        
+        time_incremental = self.increment_datetime_by_hour(start_time, hours=hours_time_incremental)
         
         final_df = pd.DataFrame()
 
