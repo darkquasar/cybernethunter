@@ -37,12 +37,12 @@ class Connector:
         self.logger = utilities.get_logger('CYBRHUNTER.CONNECTORS.UMBRELLA')
         self.logger.info('Initializing {}'.format(__name__))
         
-    def increment_datetime_by_hour(self, timestamp:str, hours:str):
-        dt = datetime.fromisoformat(timestamp) + timedelta(hours=hours)
+    def increment_datetime_by_minutes(self, timestamp:str, minutes:int):
+        dt = datetime.fromisoformat(timestamp) + timedelta(minutes=minutes)
         
         while True:
             yield dt.isoformat()
-            dt = dt + timedelta(hours=hours)
+            dt = dt + timedelta(minutes=minutes)
         
 
     def timestamp_to_unixepoch_ms(self, timestamp:str):
@@ -71,6 +71,7 @@ class Connector:
         response = requests.request("POST", url, headers=headers, data = payload)
         bearer_token = json.loads(response.text)
 
+
         self.umbrella_bearer_token = bearer_token['access_token']
 
     def umbrella_api_activity_query(self, org_id:str, api_endpoint: umbrella_api_activity_endpoint, from_timestamp:str, to_timestamp:str, records_limit:int, domains_filter:list=[]):
@@ -91,7 +92,7 @@ class Connector:
         else:
             return data_dict['data']
         
-    def get_umbrella_api_activity_dataframe(self, start_time:str, end_time:str, time_window_hourly_increments:int, org_id:str, api_endpoint: umbrella_api_activity_endpoint, records_limit:int, bearer_token:str=None, domains_filter:list=[], return_columns:list=['timestamp', 'externalip', 'domain'], time_zone:str='Australia/Brisbane'):
+    def get_umbrella_api_activity_dataframe(self, start_time:str, end_time:str, time_window_minute_increments:int, org_id:str, api_endpoint: umbrella_api_activity_endpoint, records_limit:int, bearer_token:str=None, domains_filter:list=[], return_columns:list=['timestamp', 'externalip', 'domain'], time_zone:str='Australia/Melbourne'):
         
         # Example start_time = '2020-02-18T00:00:00'
         # Example end_time = '2020-03-18T00:00:00'
@@ -128,32 +129,36 @@ class Connector:
         elif not self.umbrella_bearer_token and bearer_token != None:
             self.umbrella_bearer_token = bearer_token
         
-        time_incremental = self.increment_datetime_by_hour(start_time, hours=time_window_hourly_increments)
+        time_incremental = self.increment_datetime_by_minutes(start_time, minutes=time_window_minute_increments)
         
         final_df = pd.DataFrame()
 
         while datetime.fromisoformat(start_time) <= datetime.fromisoformat(end_time):
             
+            
+            # Umbrella API rate limit: 5 requests per second
+            for i in range(5):
+
+                start_timestamp = self.timestamp_to_unixepoch_ms(start_time)
+                end_timestamp = time_incremental.__next__()
+                
+                umbrella_results = self.umbrella_api_activity_query(
+                    org_id=org_id,
+                    domains_filter=domains_filter,
+                    api_endpoint=api_endpoint,
+                    from_timestamp=start_timestamp,
+                    to_timestamp=self.timestamp_to_unixepoch_ms(end_timestamp),
+                    records_limit=records_limit
+                )
+
+                result = pd.DataFrame(umbrella_results, columns=return_columns)
+
+                result['timestamp'] = pd.to_datetime(result['timestamp'], unit='ms')
+                result['timestamp'] = result.timestamp.dt.tz_localize('UTC').dt.tz_convert(time_zone)
+                
+                final_df = final_df.append(result)
+                start_time = end_timestamp
+            
             time.sleep(1)
-
-            start_timestamp = self.timestamp_to_unixepoch_ms(start_time)
-            end_timestamp = time_incremental.__next__()
-            
-            umbrella_results = self.umbrella_api_activity_query(
-                org_id=org_id,
-                domains_filter=domains_filter,
-                api_endpoint=api_endpoint,
-                from_timestamp=start_timestamp,
-                to_timestamp=self.timestamp_to_unixepoch_ms(end_timestamp),
-                records_limit=records_limit
-            )
-
-            result = pd.DataFrame(umbrella_results, columns=return_columns)
-
-            result['timestamp'] = pd.to_datetime(result['timestamp'], unit='ms')
-            result['timestamp'] = result.timestamp.dt.tz_localize('UTC').dt.tz_convert(time_zone)
-            
-            final_df = final_df.append(result)
-            start_time = end_timestamp
             
         return final_df

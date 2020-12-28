@@ -101,7 +101,7 @@ Function Get-UsersUACListByUAC {
 
     ForEach($UACFlag in $userAccountControlHashTable){
        
-       $objListOfUsersWithUACFlag = Find-ADAccount -ADBaseDir "DC=hydrotasmania,DC=com,DC=au" -UACValue $UACFlag.Value
+       $objListOfUsersWithUACFlag = Find-ADAccount -ADBaseDir "DC=some-of-your-domains,DC=com,DC=au" -UACValue $UACFlag.Value
        
        ForEach($UserItem in $objListOfUsersWithUACFlag) {
 
