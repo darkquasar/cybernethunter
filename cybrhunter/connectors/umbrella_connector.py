@@ -71,14 +71,22 @@ class Connector:
         response = requests.request("POST", url, headers=headers, data = payload)
         bearer_token = json.loads(response.text)
 
-
+        # We will store the token in a property and also store the 
+        # time it was requested so that we can renew it before 
+        # 3600s (1h) have elapsed
         self.umbrella_bearer_token = bearer_token['access_token']
+        self.umbrella_bearer_token_start_time = datetime.now()
+        self.basic_auth_b64 = basic_auth_b64
 
     def umbrella_api_activity_query(self, org_id:str, api_endpoint: umbrella_api_activity_endpoint, from_timestamp:str, to_timestamp:str, records_limit:int, domains_filter:list=[]):
         
         # Umbrella Activity API documentation: https://docs.umbrella.com/umbrella-api/reference#activity
         
-        url = "https://reports.api.umbrella.com/v2/organizations/{}/{}?from={}&to={}&limit={}&domains={}".format(org_id, api_endpoint.value, from_timestamp, to_timestamp, records_limit, ','.join(domains_filter))
+        if len(domains_filter) > 0:
+            url = "https://reports.api.umbrella.com/v2/organizations/{}/{}?from={}&to={}&limit={}&domains={}".format(org_id, api_endpoint.value, from_timestamp, to_timestamp, records_limit, ','.join(domains_filter))
+        else:
+            url = "https://reports.api.umbrella.com/v2/organizations/{}/{}?from={}&to={}&limit={}".format(org_id, api_endpoint.value, from_timestamp, to_timestamp, records_limit)
+
         payload = {}
         headers = {
             'Authorization': 'Bearer {}'.format(self.umbrella_bearer_token)
@@ -88,7 +96,7 @@ class Connector:
         data_dict = json.loads(response.text)
         
         if re.match('.*error.*', response.text):
-            self.logger.error(response.text)
+            self.logger.error(response.text, response.headers)
         else:
             return data_dict['data']
         
@@ -134,10 +142,14 @@ class Connector:
         final_df = pd.DataFrame()
 
         while datetime.fromisoformat(start_time) <= datetime.fromisoformat(end_time):
-            
-            
-            # Umbrella API rate limit: 5 requests per second
-            for i in range(5):
+
+            # Umbrella API rate limit: 3 requests per second
+            for i in range(3):
+                
+                # first check bearer token validity and re-authenticate if required
+                current_time = datetime.now()
+                if (current_time - self.umbrella_bearer_token_start_time) >= timedelta(seconds=3600):
+                    self.umbrella_authenticate(self.basic_auth_b64)
 
                 start_timestamp = self.timestamp_to_unixepoch_ms(start_time)
                 end_timestamp = time_incremental.__next__()
@@ -158,7 +170,7 @@ class Connector:
                 
                 final_df = final_df.append(result)
                 start_time = end_timestamp
-            
+
             time.sleep(1)
             
         return final_df
