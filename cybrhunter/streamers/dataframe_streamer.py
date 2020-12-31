@@ -61,3 +61,8 @@ class Streamer:
         
         df = pd.DataFrame().from_dict([record])
         return pd.DataFrame().append(df)
+    
+    def stream_from_dataframe_to_csv(self, dataframe:pd.core.frame.DataFrame, target_file:str):
+        # this function will essentially append dataframes to a CSV file
+        
+        dataframe.to_csv(target_file, mode='a', index=False)

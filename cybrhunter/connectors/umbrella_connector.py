@@ -33,8 +33,8 @@ class Connector:
     def __init__(self):
         
         # Setup logging
-        utilities = utils.HelperMod()
-        self.logger = utilities.get_logger('CYBRHUNTER.CONNECTORS.UMBRELLA')
+        self.utilities = utils.HelperMod()
+        self.logger = self.utilities.get_logger('CYBRHUNTER.CONNECTORS.UMBRELLA')
         self.logger.info('Initializing {}'.format(__name__))
         
     def increment_datetime_by_minutes(self, timestamp:str, minutes:int):
@@ -95,15 +95,17 @@ class Connector:
         response = requests.request("GET", url, headers=headers, data=payload)
         data_dict = json.loads(response.text)
         
-        if re.match('.*error.*', response.text):
-            self.logger.error(response.text, response.headers)
+        if isinstance(data_dict['data'], dict) and ((data_dict['data'].get('errors', False) != False) or (data_dict['data'].get('error', False) != False)):
+            error_message = 'Error {} \\ Headers: {}'.format(response.text, response.headers)
+            self.logger.error(error_message)
+            return False
         else:
             return data_dict['data']
         
-    def get_umbrella_api_activity_dataframe(self, start_time:str, end_time:str, time_window_minute_increments:int, org_id:str, api_endpoint: umbrella_api_activity_endpoint, records_limit:int, bearer_token:str=None, domains_filter:list=[], return_columns:list=['timestamp', 'externalip', 'domain'], time_zone:str='Australia/Melbourne'):
+    def get_umbrella_api_activity_dataframe(self, start_time:str, end_time:str, time_window_minute_increments:int, org_id:str, api_endpoint: umbrella_api_activity_endpoint, records_limit:int, bearer_token:str=None, domains_filter:list=[], return_columns:list=['timestamp', 'externalip', 'domain'], time_zone:str='Australia/Melbourne', yield_dataframe_chunks:bool=False, api_requests_rate_limit:int=5):
         
-        # Example start_time = '2020-02-18T00:00:00'
-        # Example end_time = '2020-03-18T00:00:00'
+        # Example UTC start_time = '2020-02-18T00:00:00'
+        # Example UTC end_time = '2020-03-18T00:00:00'
         # Example return_columns for the dataframe: ['timestamp', 'externalip', 'domain', 'verdict']
         # Example Time Zone value: 'Australia/Melbourne'
 
@@ -118,16 +120,19 @@ class Connector:
         start_time = '2020-03-01T00:00:00'
         end_time = '2020-12-16T10:00:00'
 
+
         umb_df = umb.get_umbrella_api_activity_dataframe(
                     start_time=start_time,
                     end_time=end_time,
-                    time_window_hourly_increments=6,
+                    time_window_minute_increments=0.3,
                     org_id=XXXXXXX,
                     api_endpoint=umb.umbrella_api_activity_endpoint.dns,
                     records_limit=5000,
                     domains_filter=domains_filter,
                     return_columns=['timestamp', 'externalip', 'domain'],
-                    time_zone='Australia/Melbourne')
+                    time_zone='Australia/Melbourne',
+                    yield_dataframe_chunks=True,
+                )
         '''
 
         if not self.umbrella_bearer_token and bearer_token == None:
@@ -139,17 +144,22 @@ class Connector:
         
         time_incremental = self.increment_datetime_by_minutes(start_time, minutes=time_window_minute_increments)
         
+        # df to hold all results returned by Umbrella
         final_df = pd.DataFrame()
 
         while datetime.fromisoformat(start_time) <= datetime.fromisoformat(end_time):
 
-            # Umbrella API rate limit: 3 requests per second
-            for i in range(3):
+            # df to hold partial results within the "api_requests_rate_limit" window
+            windowed_df = pd.DataFrame()
+            # Umbrella API rate limit: 5 requests per second
+            for i in range(api_requests_rate_limit):
                 
                 # first check bearer token validity and re-authenticate if required
+                # to be safe, we do it at >=3500 seconds
                 current_time = datetime.now()
-                if (current_time - self.umbrella_bearer_token_start_time) >= timedelta(seconds=3600):
+                if (current_time - self.umbrella_bearer_token_start_time) >= timedelta(seconds=3500):
                     self.umbrella_authenticate(self.basic_auth_b64)
+                    
 
                 start_timestamp = self.timestamp_to_unixepoch_ms(start_time)
                 end_timestamp = time_incremental.__next__()
@@ -164,13 +174,26 @@ class Connector:
                 )
 
                 result = pd.DataFrame(umbrella_results, columns=return_columns)
+                
+                if isinstance(result, pd.core.frame.DataFrame) == False:
+                    self.logger.error('Error in Umbrella API query, retrying in 5s')
+                    time.sleep(5)
+                    continue
 
                 result['timestamp'] = pd.to_datetime(result['timestamp'], unit='ms')
                 result['timestamp'] = result.timestamp.dt.tz_localize('UTC').dt.tz_convert(time_zone)
                 
-                final_df = final_df.append(result)
                 start_time = end_timestamp
+                
+                if yield_dataframe_chunks == True:
+                    windowed_df = windowed_df.append(result)
+                else:
+                    final_df = final_df.append(result)
 
+            if yield_dataframe_chunks == True:
+                yield windowed_df
+
+            del windowed_df
             time.sleep(1)
             
         return final_df
