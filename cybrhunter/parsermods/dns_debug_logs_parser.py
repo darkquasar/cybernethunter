@@ -52,7 +52,7 @@ class ParserMod():
                 
                 # Look for lines in Windows 2003-2008R2 DNS debug files with "PACKET" in them
                 if re.search( r'(.*) PACKET (.*?) .*', line, re.M|re.I): 
-                    
+
                     # Windows 2003
                     # For Windows 2003 type files, look for lines that start with date style YYYYMMDD
                     if re.match('^\d\d\d\d\d\d\d\d', line):
