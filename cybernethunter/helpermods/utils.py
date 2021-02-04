@@ -2,9 +2,9 @@
 
 '''
  NAME: utils.py | version: 0.2
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
- DESCRIPTION: Collection of helper modules to facilitate specific tasks in CYBRHUNTER like: downloading the tools required for artefact acquisition, copying a file using raw disk access, etc.
+ DESCRIPTION: Collection of helper modules to facilitate specific tasks in CYBERNETHUNTER like: downloading the tools required for artefact acquisition, copying a file using raw disk access, etc.
     
  Updates: 
         v0.2: Added tools download function.
@@ -43,7 +43,7 @@ class HelperMod:
                 name=dict(color='cyan')
             )
 
-            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.COMMON')
+            self.logger = logging.getLogger('CYBERNETHUNTER.HELPERS.COMMON')
             coloredlogs.install(
                 fmt='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                 level="DEBUG",
@@ -52,7 +52,7 @@ class HelperMod:
             )
 
         except ModuleNotFoundError:
-            self.logger = logging.getLogger('CYBRHUNTER.HELPERS.COMMON')
+            self.logger = logging.getLogger('CYBERNETHUNTER.HELPERS.COMMON')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
@@ -97,11 +97,11 @@ class HelperMod:
 
     def get_cyberhunt_tools(self):
 
-        CYBRHUNTER_base_dir = Path.cwd()
+        CYBERNETHUNTER_base_dir = Path.cwd()
 
         # Download Tools
-        # tools = self.extract_key_dict("tools", self.CYBRHUNTER_config).__next__()
-        tools_dict = self.CYBRHUNTER_config['tools']
+        # tools = self.extract_key_dict("tools", self.CYBERNETHUNTER_config).__next__()
+        tools_dict = self.CYBERNETHUNTER_config['tools']
 
         for kitem, vitem in tools_dict.items():
             # tool: ex. "RawCopy", "AppCompatCacheParser", etc.
@@ -122,14 +122,14 @@ class HelperMod:
 
     def create_dir(self, target_dir, return_handle=False, erase_contents=False):
             # This function will create a new folder at the specified location
-            # relative to CYBRHUNTER's base dir. If the folder already exists, it will do nothing, 
+            # relative to CYBERNETHUNTER's base dir. If the folder already exists, it will do nothing, 
             # unless "erase_contents" is set to True. In both cases it will return a string 
             # with the absolute path to the folder.
 
-            # Get CYBRHUNTER framework base dir which should be at the same level as commonmods.py
-            CYBRHUNTER_base_dir = Path.cwd()
+            # Get CYBERNETHUNTER framework base dir which should be at the same level as commonmods.py
+            CYBERNETHUNTER_base_dir = Path.cwd()
             target_dir = Path(target_dir)
-            target_dir = CYBRHUNTER_base_dir / target_dir
+            target_dir = CYBERNETHUNTER_base_dir / target_dir
 
             if not Path.exists(target_dir):
                 self.logger.info('Directory [' + str(target_dir) + '] does not exist, creating it...')
@@ -211,31 +211,31 @@ class HelperMod:
         # This function will return the absolute path to the tool specified in the "app" parameter
         # as a Pathlib.Path() object
 
-        # Get CYBRHUNTER framework base dir which should be at the same level as commonmods.py
-        CYBRHUNTER_base_dir = Path.cwd()
+        # Get CYBERNETHUNTER framework base dir which should be at the same level as commonmods.py
+        CYBERNETHUNTER_base_dir = Path.cwd()
 
-        cfg = self.CYBRHUNTER_config
+        cfg = self.CYBERNETHUNTER_config
 
-        # Loading CYBRHUNTER.yml will return a list of 3 elements, the first one [0] represents
-        # the folder where the tool will be extracted relative to CYBRHUNTER's base directory, 
+        # Loading CYBERNETHUNTER.yml will return a list of 3 elements, the first one [0] represents
+        # the folder where the tool will be extracted relative to CYBERNETHUNTER's base directory, 
         # the second one [1] represents the name of the executable and finally the 
         # third one [2] represents the download URL.
         # The names give to the executables are extracted from [1]
 
         binary_path = self.extract_key_dict(app, cfg).__next__()
 
-        bin_path = Path() / CYBRHUNTER_base_dir / binary_path[0] / binary_path[1]
+        bin_path = Path() / CYBERNETHUNTER_base_dir / binary_path[0] / binary_path[1]
 
         return bin_path
 
-    def load_cybrhunter_config(self, config_path):
+    def load_cybernethunter_config(self, config_path):
         # This function will load cyberhunt-config.yml
         
-        self.logger.info('Loading CYBRHUNTER Config at {}'.format(config_path))
+        self.logger.info('Loading CYBERNETHUNTER Config at {}'.format(config_path))
 
         with open(config_path, 'r') as conf:
             try:
-                self.CYBRHUNTER_config = yaml.load(conf)
+                self.CYBERNETHUNTER_config = yaml.load(conf)
             except yaml.YAMLError as e:
                 print(e)
 

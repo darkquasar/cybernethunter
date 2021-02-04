@@ -2,7 +2,7 @@
 
 '''
  NAME: transformer_mod.py | version: 0.1
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2019
  DESCRIPTION: Collection of helper modules to facilitate some data transformation tasks.
     
@@ -23,7 +23,7 @@ import sys
 import yaml
 from pathlib import Path
 
-from cybrhunter.helpermods import utils
+from cybernethunter.helpermods import utils
 from urllib.parse import urlparse
 
 class HelperMod:
@@ -32,8 +32,7 @@ class HelperMod:
         
         # Setup logging
         utilities = utils.HelperMod()
-        self.logger = utilities.get_logger('CYBRHUNTER.HELPERS.TRANSFORM')
-        self.logger.info('Initializing {}'.format(__name__))
+        self.logger = utilities.get_logger('CYBERNETHUNTER.HELPERS.TRANSFORM')
 
     def convert_multilines_to_singlelines(self, file):
     # This function is not yet completed, idea is to convert multiline output from Kape RECmd files like OpenPIDMRU to single lines
@@ -182,7 +181,7 @@ class HelperMod:
         # This function will allow us to add extra keys to a json record for tagging purposes
         # Example:
         #   json_record['log_name'] = json_record['Channel']
-        #   json_record['log_src_pipeline'] = 'cybrhunter'
+        #   json_record['log_src_pipeline'] = 'cybernethunter'
         
         for dict_element in tags_dict_list:
             for tag in dict_element:

@@ -2,7 +2,7 @@
 
 '''
  NAME: csv_parser.py | Version: 0.3
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: This module will provide miscellaneous parsing capabilities for records.
  
@@ -36,11 +36,11 @@ class ParserMod():
         # in our script
         try:
             import coloredlogs
-            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.CSV')
+            self.logger = logging.getLogger('CYBERNETHUNTER.PARSERS.CSV')
             coloredlogs.install(fmt='%(asctime)s - %(name)s - %(message)s', level="DEBUG", logger=self.logger)
 
         except ModuleNotFoundError:
-            self.logger = logging.getLogger('CYBRHUNTER.PARSERS.CSV')
+            self.logger = logging.getLogger('CYBERNETHUNTER.PARSERS.CSV')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
@@ -95,6 +95,6 @@ class ParserMod():
                 row_2.move_to_end(clean_key, last=False)
 
         # Tagging
-        row_2['log_src_pipe'] = "cybrhunter-dfir-csv"
+        row_2['log_src_pipe'] = "cybernethunter-dfir-csv"
 
         return dict(row_2)

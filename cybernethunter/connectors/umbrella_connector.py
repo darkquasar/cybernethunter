@@ -2,7 +2,7 @@
 
 '''
  NAME: umbrella_connector.py | version: 0.1
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2020
  DESCRIPTION: Connector that wraps some of Cisco Umbrella's API functionalities
     
@@ -24,7 +24,7 @@ import requests
 import sys
 import time
 
-from cybrhunter.helpermods import utils
+from cybernethunter.helpermods import utils
 from datetime import datetime, timedelta
 from enum import Enum
 
@@ -34,7 +34,7 @@ class Connector:
         
         # Setup logging
         self.utilities = utils.HelperMod()
-        self.logger = self.utilities.get_logger('CYBRHUNTER.CONNECTORS.UMBRELLA')
+        self.logger = self.utilities.get_logger('CYBERNETHUNTER.CONNECTORS.UMBRELLA')
         self.logger.info('Initializing {}'.format(__name__))
         
     def increment_datetime_by_minutes(self, timestamp:str, minutes:int):
@@ -112,7 +112,7 @@ class Connector:
         '''
         Example calling this function from JupyterNotebooks
         
-        from cybrhunter.connectors import umbrella_connector as cyh_umbrella
+        from cybernethunter.connectors import umbrella_connector as cyh_umbrella
         umb = cyh_umbrella.Connector()
         umb.umbrella_authenticate("YOUR_BASE64_TOKEN_HERE")
         domains_filter = ["avsvmcloud.com", "digitalcollege.org", "freescanonline.com", "deftsecurity.com", "highdatabase.com", "thedoccloud.com", "virtualdataserver.com", "incomeupdate.com", "zupertech.com", "databasegalore.com", "panhardware.com", "websitetheme.com"]

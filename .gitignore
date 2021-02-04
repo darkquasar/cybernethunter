@@ -20,7 +20,7 @@ __pycache__
 
 # Installer logs
 pip-log.txt
-.vscode
+.vscode*
 
 # Unit test / coverage reports
 .coverage
@@ -34,6 +34,3 @@ irserver.log*
 # Python / Pandas / Dask
 *.py[cod]
 dask-worker*
-
-# VSCODE
-.vscode*

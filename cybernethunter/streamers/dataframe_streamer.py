@@ -2,7 +2,7 @@
 
 '''
  NAME: dataframe_streamer.py | version: 0.1
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2020
  DESCRIPTION: Streamer for Pandas DataFrames
     
@@ -21,7 +21,7 @@ import pandas as pd
 import sys
 import time
 
-from cybrhunter.helpermods import utils
+from cybernethunter.helpermods import utils
 from streamz import Stream
 
 class Streamer:
@@ -30,7 +30,7 @@ class Streamer:
         
         # Setup logging
         self.utilities = utils.HelperMod()
-        self.logger = self.utilities.get_logger('CYBRHUNTER.STREAMER.DATAFRAME')
+        self.logger = self.utilities.get_logger('CYBERNETHUNTER.STREAMER.DATAFRAME')
         self.logger.info('Initializing {}'.format(__name__))
         
     def stream_to_dataframe_by_key(self, value_list:list, key_selector:list) -> dict:

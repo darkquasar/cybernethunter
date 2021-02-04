@@ -2,7 +2,7 @@
 
 '''
 MODULE NAME: output.py | Version: 0.2
-CYBRHUNTER Version: 0.2
+CYBERNETHUNTER Version: 0.2
 AUTHOR: Diego Perez (@darkquassar) - 2018
 DESCRIPTION: main module to handle outputs
     
@@ -25,7 +25,7 @@ import sqlite3
 import sys
 import unicodedata
 
-from cybrhunter.helpermods import utils
+from cybernethunter.helpermods import utils
 from kafka import KafkaProducer
 from pprint import pprint
 from tabulate import tabulate
@@ -38,7 +38,7 @@ class Output:
         
         # Setup logging
         utilities = utils.HelperMod()
-        self.logger = utilities.get_logger('CYBRHUNTER.OUTPUT')
+        self.logger = utilities.get_logger('CYBERNETHUNTER.OUTPUT')
         self.logger.info('Initializing {}'.format(__name__)) 
     
         # To be used in sqlite/elasticsearch output
@@ -234,10 +234,10 @@ class Output:
         # otherwise elasticsearch cannot create the index
         if self.log_type == 'windows-event':
             dictobj['log_name'] = dictobj['Channel']
-            dictobj['log_src_pipeline'] = "cybrhunter"
+            dictobj['log_src_pipeline'] = "cybernethunter"
 
         if self.log_type == 'csv':
-            dictobj['log_src_pipeline'] = "cybrhunter"          
+            dictobj['log_src_pipeline'] = "cybernethunter"          
 
         # Assigning the value of the source host where the logs were collected
         dictobj['log_hostname'] = self.hostname

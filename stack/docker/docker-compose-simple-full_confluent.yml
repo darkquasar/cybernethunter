@@ -29,9 +29,9 @@ services:
       - ./config/elasticsearch/certs/:/usr/share/elasticsearch/config/certs
       - ./config/elasticsearch/scripts/:/usr/share/elasticsearch/config/scripts
     restart: always
-    entrypoint: config/scripts/cybrhunter-es-entrypoint.sh
+    entrypoint: config/scripts/cybernethunter-es-entrypoint.sh
     environment:
-      - cluster.name="cybrhunter-cluster"
+      - cluster.name="cybernethunter-cluster"
       - node.name=cyberh-01
       - discovery.type=single-node
       #- bootstrap.memory_lock=true
@@ -45,7 +45,7 @@ services:
         soft: -1
         hard: -1
     networks:
-      - cybrhunter
+      - cybernethunter
     healthcheck:
       test: curl -s https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
       interval: 30s
@@ -65,7 +65,7 @@ services:
       - server.name="cyberhunt-kibana"
       - xpack.reporting.capture.browser.chromium.disableSandbox=true
     networks:
-      - cybrhunter
+      - cybernethunter
     depends_on:
       - cyberhunt-elasticsearch
     healthcheck:
@@ -89,7 +89,7 @@ services:
       - ./config/logstash/pipeline:/usr/share/logstash/pipeline
       - ./config/logstash/scripts:/usr/share/logstash/scripts
     networks:
-      - cybrhunter
+      - cybernethunter
     depends_on:
       - cyberhunt-elasticsearch
       - cyberhunt-kafka-br-1
@@ -106,7 +106,7 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_SERVERS: 'cyberhunt-zk-1:22888:23888'
     networks:
-      - cybrhunter
+      - cybernethunter
 
   cyberhunt-kafka-br-1:
     image: confluentinc/cp-enterprise-kafka:5.3.0
@@ -133,7 +133,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     networks:
-      - cybrhunter
+      - cybernethunter
 
   cyberhunt-kafka-rest-proxy:
     image: confluentinc/cp-kafka-rest:5.3.0
@@ -150,7 +150,7 @@ services:
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
       #KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
     networks:
-      - cybrhunter
+      - cybernethunter
 
   cyberhunt-landoop:
     image: landoop/kafka-topics-ui:latest
@@ -164,7 +164,7 @@ services:
       KAFKA_REST_PROXY_URL: 'http://cyberhunt-kafka-rest-proxy:8082'
       PROXY: 'true'
     networks:
-      - cybrhunter
+      - cybernethunter
 
   cyberhunt-portainer:
     image: portainer/portainer
@@ -176,10 +176,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config/portainer_data:/data
     networks:
-      - cybrhunter
+      - cybernethunter
 
 networks:
-  cybrhunter:
+  cybernethunter:
     driver: bridge
 
 volumes:

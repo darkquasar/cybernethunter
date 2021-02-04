@@ -8,7 +8,7 @@ ExportFormat: XML
 FileMask: '*.evtx'
 Processors:
     -
-        Executable: cybrhunter\evtx_dump.exe
+        Executable: cybernethunter\evtx_dump.exe
         CommandLine: --dont-show-record-number %sourceFile% --no-confirm-overwrite
         ExportFile: events.xml
         ExportFormat: xml

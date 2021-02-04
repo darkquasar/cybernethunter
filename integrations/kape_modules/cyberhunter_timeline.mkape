@@ -1,4 +1,4 @@
-Description: Executes modules to extract timeline information and then feeds results into cybrhunter for Elastic Stack output 
+Description: Executes modules to extract timeline information and then feeds results into cybernethunter for Elastic Stack output 
 Category: Timeline
 Author: Diego Perez (@darkquassar)
 Version: 1

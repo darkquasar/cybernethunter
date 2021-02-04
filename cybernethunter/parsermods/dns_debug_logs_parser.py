@@ -2,7 +2,7 @@
 
 '''
  NAME: dns_debug_logs_parser.py | Version: 0.2
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: This module will allow the analyst to parse Windows DNS Debug logs on demand.
  REF: Simplified and heavily adapted from https://github.com/nerdiosity/DNSplice
@@ -24,7 +24,7 @@ import re
 import sys
 import tldextract
 
-from cybrhunter.helpermods import utils
+from cybernethunter.helpermods import utils
 from datetime import datetime
 from pathlib import Path
 
@@ -34,7 +34,7 @@ class ParserMod():
 
         # Setup logging
         utilities = utils.HelperMod()
-        self.logger = utilities.get_logger('CYBRHUNTER.PARSERS.DNSDEBUGLOG')
+        self.logger = utilities.get_logger('CYBERNETHUNTER.PARSERS.DNSDEBUGLOG')
         self.logger.info('Initializing {}'.format(__name__))
         
         # initializing variables

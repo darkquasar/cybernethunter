@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 '''
- NAME: cybrhunter.py | version: 0.1
- CYBRHUNTER Version: 0.2
+ NAME: cybernethunter.py | version: 0.1
+ CYBERNETHUNTER Version: 0.2
  AUTHOR: Diego Perez (@darkquasar) - 2018
- DESCRIPTION: Main module that controls the behaviour of the CYBRHUNTER Hunting and IR framework 
+ DESCRIPTION: Main module that controls the behaviour of the CYBERNETHUNTER Hunting and IR framework 
     
  Updates: 
         v0.1: ---.
@@ -26,33 +26,23 @@ from pathlib import Path
 from time import strftime
 from streamz import Stream
 
-# Ugly but workable importing solution so that the package can be 
-# (1) imported as a package, (2) run from commandline with `python -m cybrhunter`
-# or (3) from the source directory as `python cybrhunter.py`
-if "cybrhunter" in sys.modules:
-    from cybrhunter.helpermods import utils
-    from cybrhunter.helpermods import transforms
-    from cybrhunter.outputmods import output as cyout
-    from cybrhunter.parsermods import xml_parser as cyxml
-    from cybrhunter.parsermods import csv_parser as cycsv
-else:
-    from helpermods import utils
-    from helpermods import transforms
-    from outputmods import output as cyout
-    from parsermods import xml_parser as cyxml
-    from parsermods import csv_parser as cycsv
+from cybernethunter.helpermods import utils
+from cybernethunter.helpermods import transforms
+from cybernethunter.outputmods import output as cyout
+from cybernethunter.parsermods import xml_parser as cyxml
+from cybernethunter.parsermods import csv_parser as cycsv
 
-class Arguments(object):
+class Arguments():
     
     def __init__(self, args):
 
         self.parser = argparse.ArgumentParser(
-                description="CYBRHUNTER DFIR Framework"
+                description="CYBERNETHUNTER DFIR Framework"
                 )
     
         self.parser.add_argument(
                 "-a", "--action",
-                help="This option determines what action will be executed by CYBRHUNTER: parse logs, collect logs, hunt (runs a particular data anlysis mod) or learn (ML)",
+                help="This option determines what action will be executed by CYBERNETHUNTER: parse logs, collect logs, hunt (runs a particular data anlysis mod) or learn (ML)",
                 type=str,
                 choices=["collect", "hunt", "learn", "parse"],
                 default="parse",
@@ -163,7 +153,7 @@ class cyh_helpers:
         # Setup logging
         self.utilities = utils.HelperMod()
         self.transforms = transforms.HelperMod()
-        self.logger = self.utilities.get_logger('CYBRHUNTER')
+        self.logger = self.utilities.get_logger('CYBERNETHUNTER')
 
     # Define an "init_output_pipe" function that will initialize the output pipe for the records processed by the parsermods.
     def init_output_pipe(self, output_pipe, output_type, output_file=None, log_type=None, kafka_broker=None, rabbitmq_broker=None, rabbitmq_credentials=None):
@@ -283,12 +273,12 @@ def main():
     # Capturing start time for debugging purposes
     st = datetime.now()
 
-    helpers.logger.info("Starting CYBRHUNTER Hunting Framework")
+    helpers.logger.info("Starting CYBERNETHUNTER Hunting Framework")
 
-    # CYBRHUNTER ACTION: PARSE
+    # CYBERNETHUNTER ACTION: PARSE
     if pargs.action == "parse":
 
-        helpers.logger.info("Starting CYBRHUNTER Parsers")
+        helpers.logger.info("Starting CYBERNETHUNTER Parsers")
 
         # Obtain a list of all target files
         targetfiles = helpers.list_targetfiles(pargs)
@@ -320,10 +310,10 @@ def main():
             # Send records to output pipe
             helpers.send_to_output_pipe(record_generator, use_streamz=False)
 
-    # CYBRHUNTER ACTION: COLLECT
+    # CYBERNETHUNTER ACTION: COLLECT
     if pargs.action == "collect":
-        helpers.logger.info("Initiating CYBRHUNTER DFIR Collector")
-        helpers.logger.info("Starting CYBRHUNTER MultiParser")
+        helpers.logger.info("Initiating CYBERNETHUNTER DFIR Collector")
+        helpers.logger.info("Starting CYBERNETHUNTER MultiParser")
 
         # Obtain a list of all target files
         targetfiles = helpers.list_targetfiles(pargs)
@@ -335,7 +325,7 @@ def main():
             parsermod.execute()
             parsermod.runpipe(parsermod.results)
 
-    # CYBRHUNTER ACTION: HUNT
+    # CYBERNETHUNTER ACTION: HUNT
     elif pargs.action == "hunt":
         # TBD: idea is to load the hunt-template and pass execution of the template
         # to the "jaguarhunter" (imports PySpark) module inside huntmods. This module(s) will load the template

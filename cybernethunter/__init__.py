@@ -8,7 +8,7 @@ __stable__ = True
 __version__ = "3.0"
 
 import sys
-sys.path.append("cybrhunter")
+sys.path.append("cybernethunter")
 
 from . import helpermods
 from . import parsermods

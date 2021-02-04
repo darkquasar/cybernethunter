@@ -2,7 +2,7 @@
 
 '''
  NAME: evtx_parser.py | Version: 0.1
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2019
  DESCRIPTION: This module will parse EVTX records into JSON using pyevtx-rs
  REFERENCE: https://github.com/omerbenamram/evtx
@@ -21,7 +21,7 @@ import json
 import logging
 import sys
 
-from cybrhunter.helpermods import utils
+from cybernethunter.helpermods import utils
 from evtx import PyEvtxParser
 from pathlib import Path
 
@@ -31,7 +31,7 @@ class ParserMod():
         
         # Setup logging
         utilities = utils.HelperMod()
-        self.logger = utilities.get_logger('CYBRHUNTER.PARSERS.EVTX')
+        self.logger = utilities.get_logger('CYBERNETHUNTER.PARSERS.EVTX')
         self.logger.info('Initializing {}'.format(__name__))
 
         # initializing variables

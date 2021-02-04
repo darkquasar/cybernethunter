@@ -2,7 +2,7 @@
 
 '''
  NAME: xml_parser.py | Version: 0.3
- CYBRHUNTER Version: 0.3
+ CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2018
  DESCRIPTION: This module will parse XML records into JSON
  USAGE: 
@@ -23,7 +23,7 @@ import re
 import sys
 import xml.etree.cElementTree as ET
 
-from cybrhunter.helpermods import utils
+from cybernethunter.helpermods import utils
 from collections import defaultdict
 from pathlib import Path
 
@@ -47,7 +47,7 @@ class ParserMod():
         
         # Setup logging
         utilities = utils.HelperMod()
-        self.logger = utilities.get_logger('CYBRHUNTER.PARSERS.XML')
+        self.logger = utilities.get_logger('CYBERNETHUNTER.PARSERS.XML')
         self.logger.info('Initializing {}'.format(__name__))        
         
         # initializing variables
