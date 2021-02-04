@@ -61,7 +61,7 @@ class HelperMod:
             self.logger.setLevel(logging.INFO)
 
         # Initializing variables        
-        config_file_path = Path.cwd() / "cyberhunt-config.yml"
+        config_file_path = Path.cwd() / "cyberhunt_config.yml"
         
     def get_logger(self, logger_name:str):
         # Setup logging 
@@ -229,7 +229,7 @@ class HelperMod:
         return bin_path
 
     def load_cybernethunter_config(self, config_path):
-        # This function will load cyberhunt-config.yml
+        # This function will load cyberhunt_config.yml
         
         self.logger.info('Loading CYBERNETHUNTER Config at {}'.format(config_path))
 
