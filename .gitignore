@@ -34,3 +34,6 @@ irserver.log*
 # Python / Pandas / Dask
 *.py[cod]
 dask-worker*
+
+# VSCODE
+.vscode*
