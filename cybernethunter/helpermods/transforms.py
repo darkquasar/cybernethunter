@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
- NAME: transformer_mod.py | version: 0.1
+ NAME: transforms.py | version: 0.1
  CYBERNETHUNTER Version: 0.3
  AUTHOR: Diego Perez (@darkquasar) - 2019
  DESCRIPTION: Collection of helper modules to facilitate some data transformation tasks.
