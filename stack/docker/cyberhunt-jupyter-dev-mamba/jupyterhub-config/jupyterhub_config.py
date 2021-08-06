@@ -27,10 +27,10 @@ c.JupyterHub.pid_file = pjoin(runtime_dir, 'jupyterhub-proxy.pid')
 
 ## *** Network Config Parameters *** ##
 ## ********************************* ##
-
-#c.JupyterHub.port = 443
-#c.JupyterHub.ssl_key = pjoin(ssl_dir, 'ssl.key')
-#c.JupyterHub.ssl_cert = pjoin(ssl_dir, 'ssl.cert')
+ssl_dir = '/opt/cybernethunter'
+c.JupyterHub.port = 443
+c.JupyterHub.ssl_key = pjoin(ssl_dir, 'key.pem')
+c.JupyterHub.ssl_cert = pjoin(ssl_dir, 'cert.pem')
 
 # The public facing ip of the proxy
 # c.JupyterHub.ip = '0.0.0.0'
